@@ -87,16 +87,12 @@
     }
     .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .brand-mark {
-      display: grid;
-      place-items: center;
-      width: 45px;
-      height: 45px;
-      flex: 0 0 45px;
-      border: 1px solid rgb(229 183 91 / 55%);
-      border-radius: 12px;
-      color: var(--gold-bright);
-      background: rgb(229 183 91 / 8%);
-      font-size: 22px;
+      display: block;
+      width: 60px;
+      height: 60px;
+      flex: 0 0 60px;
+      object-fit: contain;
+      filter: drop-shadow(0 5px 12px rgb(0 0 0 / 45%));
     }
     .brand-name { font-size: 24px; font-weight: 950; letter-spacing: .18em; line-height: 1; }
     .brand small { display: block; margin-top: 6px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .25em; }
@@ -288,6 +284,7 @@
     @media (max-width: 760px) {
       .site-header { position: static; align-items: flex-start; }
       #message { top: 16px; right: 14px; width: calc(100% - 28px); }
+      .brand-mark { width: 52px; height: 52px; flex-basis: 52px; }
       .brand-name { font-size: 20px; }
       .top-actions { justify-content: flex-end; }
       main { width: min(100% - 28px, 1160px); padding-top: 38px; }
@@ -336,7 +333,7 @@
 <body>
   <header class="site-header">
     <div class="brand" aria-label="MUAZCO Raid Planer 2.3">
-      <div class="brand-mark" aria-hidden="true">⚔</div>
+      <img class="brand-mark" src="muazco-logo.png" alt="" width="60" height="60" aria-hidden="true">
       <div><div class="brand-name">MUAZCO</div><small>RAID PLANER 2.3</small></div>
     </div>
     <div class="top-actions">
