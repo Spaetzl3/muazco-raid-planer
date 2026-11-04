@@ -1,0 +1,1315 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="description" content="MUAZCO Raid Planer 2.3 – Raids ansehen, Mitglieder anmelden und Kader verwalten.">
+  <title>MUAZCO · Raid Planer 2.3</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --bg: #090d12;
+      --surface: #111820;
+      --surface-2: #17212b;
+      --surface-3: #1e2b37;
+      --border: #2b3945;
+      --text: #f4f1e8;
+      --muted: #9cabb6;
+      --gold: #e5b75b;
+      --gold-bright: #ffd47c;
+      --green: #70c690;
+      --red: #ef8582;
+      --blue: #75b9e7;
+      --shadow: 0 24px 70px rgb(0 0 0 / 35%);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 82% -8%, rgb(229 183 91 / 18%), transparent 31rem),
+        radial-gradient(circle at 3% 36%, rgb(68 118 149 / 11%), transparent 26rem),
+        var(--bg);
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      opacity: .2;
+      pointer-events: none;
+      background-image: linear-gradient(rgb(255 255 255 / 2%) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 2%) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: linear-gradient(to bottom, black, transparent 80%);
+    }
+    button, input, select, textarea { font: inherit; }
+    button, input, select, textarea { outline-offset: 3px; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--gold-bright); }
+    button {
+      min-height: 44px;
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 16px;
+      color: #18140c;
+      background: linear-gradient(135deg, var(--gold-bright), var(--gold));
+      box-shadow: 0 7px 20px rgb(229 183 91 / 15%);
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .16s ease, filter .16s ease, opacity .16s ease;
+    }
+    button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    button.secondary { color: var(--text); background: var(--surface-3); box-shadow: none; }
+    button.danger { color: #fff; background: #773e42; box-shadow: none; }
+    button.success { color: #08160d; background: var(--green); box-shadow: none; }
+    button.bench { color: #211707; background: var(--gold-bright); box-shadow: none; }
+    .hidden { display: none !important; }
+
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      min-height: 88px;
+      padding: 18px max(20px, calc((100vw - 1160px) / 2));
+      border-bottom: 1px solid rgb(255 255 255 / 8%);
+      background: rgb(9 13 18 / 76%);
+      backdrop-filter: blur(18px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 45px;
+      height: 45px;
+      flex: 0 0 45px;
+      border: 1px solid rgb(229 183 91 / 55%);
+      border-radius: 12px;
+      color: var(--gold-bright);
+      background: rgb(229 183 91 / 8%);
+      font-size: 22px;
+    }
+    .brand-name { font-size: 24px; font-weight: 950; letter-spacing: .18em; line-height: 1; }
+    .brand small { display: block; margin-top: 6px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .25em; }
+    .top-actions, .actions { display: flex; gap: 9px; flex-wrap: wrap; }
+    .account-pill { align-self: center; color: var(--green); font-size: 13px; font-weight: 800; }
+
+    main { width: min(1160px, calc(100% - 40px)); margin: 0 auto; padding: 54px 0 70px; }
+    .hero { margin-bottom: 30px; }
+    .eyebrow { margin: 0 0 10px; color: var(--gold); font-size: 12px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; }
+    h1 { max-width: 760px; margin: 0; font-size: clamp(34px, 5.2vw, 64px); line-height: .98; letter-spacing: -.045em; }
+    .hero-copy { max-width: 700px; margin: 18px 0 0; color: var(--muted); font-size: 17px; line-height: 1.65; }
+    #message {
+      position: fixed;
+      top: 104px;
+      right: 20px;
+      z-index: 30;
+      width: min(430px, calc(100% - 40px));
+      min-height: 0;
+      pointer-events: none;
+    }
+    #message .notice { margin: 0; box-shadow: var(--shadow); pointer-events: auto; }
+    .notice { margin: 0 0 24px; padding: 13px 16px; border: 1px solid rgb(229 183 91 / 26%); border-left: 4px solid var(--gold); border-radius: 8px; background: rgb(229 183 91 / 7%); line-height: 1.45; }
+    .notice.error { border-color: rgb(239 133 130 / 30%); border-left-color: var(--red); color: #ffc0bd; background: rgb(239 133 130 / 8%); }
+    .notice.ok { border-color: rgb(112 198 144 / 30%); border-left-color: var(--green); color: #bff1ce; background: rgb(112 198 144 / 8%); }
+
+    .raid-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+    .card {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: linear-gradient(150deg, rgb(26 37 47 / 95%), rgb(15 22 29 / 98%));
+      box-shadow: var(--shadow);
+    }
+    .raid-card-header {
+      position: relative;
+      padding: 24px 70px 20px 24px;
+      cursor: pointer;
+      transition: background .16s ease;
+    }
+    .raid-card-header:hover { background: rgb(255 255 255 / 2%); }
+    .raid-card-header:focus-visible { outline: 2px solid var(--gold-bright); outline-offset: -3px; }
+    .raid-toggle-indicator {
+      position: absolute;
+      top: 25px;
+      right: 24px;
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--gold-bright);
+      background: var(--surface-2);
+      font-size: 18px;
+      transition: transform .16s ease;
+    }
+    .card.collapsed .raid-toggle-indicator { transform: rotate(-90deg); }
+    .raid-card-body[hidden] { display: none; }
+    .raid-card-body-top { padding: 0 24px 20px; }
+    .card-date { color: var(--gold-bright); font-size: 12px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    .card h2 { margin: 10px 0 8px; font-size: 26px; letter-spacing: -.02em; }
+    .card-note { min-height: 42px; margin: 0 0 20px; color: var(--muted); line-height: 1.5; }
+    .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .stat { padding: 10px 11px; border: 1px solid rgb(255 255 255 / 6%); border-radius: 10px; color: #c5d0d7; background: rgb(255 255 255 / 3%); font-size: 13px; }
+    .stat strong { color: var(--text); }
+    .card-actions { margin-top: 18px; }
+    .roster { padding: 20px 24px 24px; border-top: 1px solid var(--border); background: rgb(5 9 13 / 22%); }
+    .section-title { display: flex; justify-content: space-between; gap: 10px; margin: 0 0 12px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+    .count-pill { padding: 2px 8px; border-radius: 999px; color: var(--gold-bright); background: rgb(229 183 91 / 11%); font-size: 11px; }
+    .signup-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid rgb(255 255 255 / 6%); }
+    .signup-row.leader-row, .signup-table-head {
+      grid-template-columns: minmax(240px, 1fr) 102px 118px 278px;
+      gap: 12px;
+    }
+    .signup-table-head {
+      display: grid;
+      align-items: end;
+      padding: 8px 0 5px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .signup-cell { min-width: 0; }
+    .signup-cell select, .signup-cell button { width: 100%; min-height: 36px; padding: 7px 9px; font-size: 12px; }
+    .signup-cell .status { display: block; }
+    .status-actions { display: grid; grid-template-columns: minmax(142px, 1fr) 92px; gap: 9px; }
+    .fixed-role {
+      display: flex;
+      align-items: center;
+      min-height: 36px;
+      color: var(--text);
+      font-size: 13px;
+    }
+    .signup-row:last-child { border-bottom: 0; }
+    .roster-group { margin-top: 18px; }
+    .roster-group:first-of-type { margin-top: 8px; }
+    .roster-group-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 4px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid rgb(229 183 91 / 18%);
+      color: var(--gold-bright);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .roster-group-empty { margin: 9px 0 0; color: var(--muted); font-size: 12px; }
+    .player-name { overflow-wrap: anywhere; font-weight: 750; }
+    .player-meta { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .status { font-size: 12px; font-weight: 800; }
+    .status-going { color: var(--green); }
+    .status-bench { color: var(--gold-bright); }
+    .status-declined { color: var(--muted); }
+    .empty { grid-column: 1 / -1; padding: 48px 26px; border: 1px dashed #3d4c58; border-radius: 16px; color: var(--muted); background: rgb(17 24 32 / 48%); text-align: center; line-height: 1.55; }
+
+    .leader-panel { margin: 0 0 26px; padding: 20px; border: 1px solid rgb(117 185 231 / 28%); border-radius: 16px; background: rgb(117 185 231 / 6%); }
+    .leader-panel-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; }
+    .leader-panel h2 { margin: 0; font-size: 18px; }
+    .leader-panel p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+    .request-list { display: grid; gap: 10px; }
+    .request {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+    }
+    .request-raid { color: var(--blue); font-size: 12px; }
+    .request .actions { justify-content: flex-end; }
+    .request button { min-height: 38px; padding: 8px 12px; font-size: 13px; }
+    .request select { width: auto; min-height: 38px; padding: 7px 10px; font-size: 13px; }
+
+    dialog {
+      width: min(520px, calc(100% - 28px));
+      max-height: calc(100vh - 28px);
+      overflow: auto;
+      padding: 0;
+      border: 1px solid #3a4854;
+      border-radius: 18px;
+      color: var(--text);
+      background: var(--surface);
+      box-shadow: 0 30px 100px #000a;
+    }
+    dialog::backdrop { background: rgb(0 0 0 / 72%); backdrop-filter: blur(4px); }
+    .dialog-body { padding: 26px; }
+    dialog h2 { margin: 0 0 7px; font-size: 25px; }
+    dialog p { color: var(--muted); line-height: 1.5; }
+    label { display: block; margin: 15px 0 6px; color: #c9d2d8; font-size: 13px; font-weight: 700; }
+    input, select, textarea {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 1px solid #40505d;
+      border-radius: 9px;
+      color: #fff;
+      background: #0c1319;
+    }
+    textarea { min-height: 86px; resize: vertical; }
+    .field-hint { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
+    .role-field { margin: 15px 0 0; padding: 0; border: 0; }
+    .role-field legend { margin-bottom: 8px; color: #c9d2d8; font-size: 13px; font-weight: 700; }
+    .role-options { display: flex; gap: 9px; flex-wrap: wrap; }
+    .role-choice {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin: 0;
+      padding: 9px 12px;
+      border: 1px solid #40505d;
+      border-radius: 9px;
+      background: #0c1319;
+      cursor: pointer;
+    }
+    .role-choice:has(input:checked) { border-color: var(--gold); background: rgb(229 183 91 / 10%); }
+    .role-choice input { width: auto; min-height: 0; margin: 0; accent-color: var(--gold); }
+    .form-note { margin: 18px 0 0; padding: 12px 14px; border-radius: 9px; color: #c9d5dc; background: var(--surface-2); font-size: 13px; }
+    dialog .actions { margin-top: 20px; }
+    footer { padding: 32px 20px 48px; color: #778894; text-align: center; font-size: 12px; letter-spacing: .08em; }
+
+    @media (max-width: 760px) {
+      .site-header { position: static; align-items: flex-start; }
+      #message { top: 16px; right: 14px; width: calc(100% - 28px); }
+      .brand-name { font-size: 20px; }
+      .top-actions { justify-content: flex-end; }
+      main { width: min(100% - 28px, 1160px); padding-top: 38px; }
+      .request { grid-template-columns: 1fr; }
+      .request .actions { justify-content: flex-start; }
+    }
+    @media (max-width: 980px) {
+      .signup-table-head { display: none; }
+      .signup-row.leader-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px 14px;
+        margin: 10px 0;
+        padding: 14px;
+        border: 1px solid rgb(255 255 255 / 8%);
+        border-radius: 10px;
+        background: rgb(255 255 255 / 2%);
+      }
+      .signup-row.leader-row .player-cell { grid-column: 1 / -1; }
+      .signup-row.leader-row .signup-cell::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 5px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .07em;
+        text-transform: uppercase;
+      }
+    }
+    @media (max-width: 520px) {
+      .site-header { flex-direction: column; }
+      .top-actions { width: 100%; }
+      .top-actions button { flex: 1 1 auto; }
+      .stats { grid-template-columns: 1fr; }
+      .raid-card-header, .raid-card-body-top, .roster { padding-left: 18px; padding-right: 18px; }
+      .signup-row { align-items: start; }
+      .signup-row.leader-row { grid-template-columns: 1fr; }
+      .signup-row.leader-row .player-cell { grid-column: auto; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand" aria-label="MUAZCO Raid Planer 2.3">
+      <div class="brand-mark" aria-hidden="true">⚔</div>
+      <div><div class="brand-name">MUAZCO</div><small>RAID PLANER 2.3</small></div>
+    </div>
+    <div class="top-actions">
+      <span id="accountStatus" class="account-pill hidden"></span>
+      <button class="secondary" id="memberLoginBtn" type="button">Mit Discord anmelden</button>
+      <button class="secondary" id="loginBtn" type="button">Raidleitung Login</button>
+      <button id="newRaidBtn" class="hidden" type="button">+ Raid erstellen</button>
+      <button class="secondary hidden" id="logoutBtn" type="button">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="pageTitle">
+      <div>
+        <p class="eyebrow">WoW FOREVER Raid Organisation</p>
+        <h1 id="pageTitle">MUAZCO RAIDS</h1>
+        <p class="hero-copy">Wähle deinen Raid und sende deine Gastanfrage. Nach Freigabe durch die Raidleitung erscheint dein Charakter im bestätigten Kader.</p>
+      </div>
+    </section>
+
+    <div id="message" role="status" aria-live="polite"></div>
+
+    <section id="leaderPanel" class="leader-panel hidden" aria-labelledby="leaderPanelTitle">
+      <div class="leader-panel-head">
+        <div><h2 id="leaderPanelTitle">Offene Gastanfragen</h2><p>Nur für bestätigte Raidleiter sichtbar.</p></div>
+        <span id="pendingCount" class="count-pill">0 offen</span>
+      </div>
+      <div id="requestList" class="request-list"></div>
+      <div class="leader-panel-head" style="margin-top:20px">
+        <div><h2>Discord-Mitgliedsanfragen</h2><p>Einmalige Freigabe für automatische Mitgliedsanmeldungen.</p></div>
+        <span id="memberRequestCount" class="count-pill">0 offen</span>
+      </div>
+      <div id="memberRequestList" class="request-list"></div>
+    </section>
+
+    <section id="raidGrid" class="raid-grid" aria-label="Geplante Raids">
+      <div class="empty">Raids werden geladen …</div>
+    </section>
+  </main>
+
+  <footer>MUAZCO · RAID PLANER 2.3 · 0,00 € Zusatzkosten</footer>
+
+  <dialog id="signupDialog" aria-labelledby="signupTitle">
+    <div class="dialog-body">
+      <h2 id="signupTitle">Gastanfrage stellen</h2>
+      <p id="signupRaidTitle"></p>
+      <form id="signupForm">
+        <label for="charName">Charaktername</label>
+        <input id="charName" name="character_name" required maxlength="40" minlength="2" autocomplete="off" spellcheck="false">
+
+        <label for="characterClass">Klasse</label>
+        <select id="characterClass" name="class" required>
+          <option value="">Bitte wählen</option>
+          <option value="Druide">Druide</option>
+          <option value="Hexenmeister">Hexenmeister</option>
+          <option value="Jäger">Jäger</option>
+          <option value="Krieger">Krieger</option>
+          <option value="Magier">Magier</option>
+          <option value="Paladin">Paladin</option>
+          <option value="Priester">Priester</option>
+          <option value="Schamane">Schamane</option>
+          <option value="Schurke">Schurke</option>
+        </select>
+
+        <fieldset class="role-field">
+          <legend>Mögliche Rollen</legend>
+          <div id="roleOptions" class="role-options"><span class="field-hint">Zuerst Klasse wählen.</span></div>
+        </fieldset>
+        <span class="field-hint">Du kannst mehrere Rollen anbieten. Die Raidleitung legt bei der Freigabe deine endgültige Rolle fest.</span>
+
+        <div id="signupFormNote" class="form-note">Deine Anfrage wird als <strong>Dabei</strong> und zunächst <strong>ausstehend</strong> gespeichert. Sie ist öffentlich nicht sichtbar und zählt erst nach Freigabe zum Kader.</div>
+        <div class="actions">
+          <button type="submit">Anfrage senden</button>
+          <button type="button" class="secondary" data-close>Abbrechen</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog id="loginDialog" aria-labelledby="loginTitle">
+    <div class="dialog-body">
+      <h2 id="loginTitle">Raidleitung</h2>
+      <p>Die Verwaltungsansicht wird erst nach der serverseitigen Berechtigungsprüfung geöffnet.</p>
+      <form id="loginForm">
+        <label for="email">E-Mail</label>
+        <input id="email" name="email" type="email" autocomplete="username" required>
+        <label for="password">Passwort</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <div class="actions">
+          <button type="submit">Sicher einloggen</button>
+          <button type="button" class="secondary" data-close>Abbrechen</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog id="raidDialog" aria-labelledby="raidDialogTitle">
+    <div class="dialog-body">
+      <h2 id="raidDialogTitle">Raid erstellen</h2>
+      <form id="raidForm">
+        <label for="raidName">Raid-Name</label>
+        <input id="raidName" name="name" maxlength="100" required placeholder="z. B. Molten Core">
+        <label for="raidDate">Startzeit</label>
+        <input id="raidDate" name="starts_at" type="datetime-local" required>
+        <label for="raidCapacity">Max. Spieler</label>
+        <select id="raidCapacity" name="capacity" required>
+          <option value="10">10 Spieler</option>
+          <option value="20">20 Spieler</option>
+          <option value="25">25 Spieler</option>
+          <option value="40" selected>40 Spieler</option>
+        </select>
+        <label for="raidNote">Notiz (optional)</label>
+        <textarea id="raidNote" name="note" maxlength="250" placeholder="Treffpunkt, Discord, Loot-Regeln …"></textarea>
+        <div class="actions">
+          <button type="submit">Raid speichern</button>
+          <button type="button" class="secondary" data-close>Abbrechen</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.1/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script>
+    (() => {
+      'use strict';
+
+      const config = window.FOREVER_CONFIG || {};
+      const elements = {
+        grid: document.querySelector('#raidGrid'),
+        message: document.querySelector('#message'),
+        memberLoginBtn: document.querySelector('#memberLoginBtn'),
+        accountStatus: document.querySelector('#accountStatus'),
+        loginBtn: document.querySelector('#loginBtn'),
+        logoutBtn: document.querySelector('#logoutBtn'),
+        newRaidBtn: document.querySelector('#newRaidBtn'),
+        leaderPanel: document.querySelector('#leaderPanel'),
+        requestList: document.querySelector('#requestList'),
+        pendingCount: document.querySelector('#pendingCount'),
+        memberRequestList: document.querySelector('#memberRequestList'),
+        memberRequestCount: document.querySelector('#memberRequestCount')
+      };
+
+      const classRoles = Object.freeze({
+        'Druide': ['Tank', 'Heiler', 'DD'],
+        'Hexenmeister': ['DD'],
+        'Jäger': ['DD'],
+        'Krieger': ['Tank', 'DD'],
+        'Magier': ['DD'],
+        'Paladin': ['Tank', 'Heiler', 'DD'],
+        'Priester': ['Heiler', 'DD'],
+        'Schamane': ['Heiler', 'DD'],
+        'Schurke': ['DD']
+      });
+      const allowedStatuses = new Set(['Dabei', 'Ersatz', 'Ersatzbank', 'Abgesagt']);
+      const playerTypeLabels = Object.freeze({ guest: 'Gast', member: 'Mitglied' });
+      const state = {
+        db: null,
+        user: null,
+        isLeader: false,
+        isMember: false,
+        memberStatus: 'none',
+        raids: [],
+        approvedSignups: [],
+        pendingSignups: [],
+        memberRequests: [],
+        activeRaidId: null,
+        editRaidId: null,
+        collapsedRaids: new Set()
+      };
+
+      const byId = id => document.getElementById(id);
+      const text = (tag, value, className) => {
+        const node = document.createElement(tag);
+        node.textContent = value == null ? '' : String(value);
+        if (className) node.className = className;
+        return node;
+      };
+      const clear = node => { while (node.firstChild) node.removeChild(node.firstChild); };
+      const friendlyError = fallback => fallback || 'Das hat leider nicht funktioniert. Bitte versuche es erneut.';
+      const setBusy = (form, busy) => {
+        for (const control of form.elements) control.disabled = busy;
+        const submit = form.querySelector('[type="submit"]');
+        if (submit) submit.textContent = busy ? 'Bitte warten …' : submit.dataset.label || submit.textContent.replace('Bitte warten …', 'Speichern');
+      };
+      const showNotice = (message, type = '') => {
+        clear(elements.message);
+        const box = text('div', message, `notice ${type}`.trim());
+        elements.message.append(box);
+      };
+      const closeDialog = dialog => { if (dialog && dialog.open) dialog.close(); };
+      const openDialog = dialog => { if (dialog && !dialog.open) dialog.showModal(); };
+      const formatDate = value => {
+        const date = new Date(value);
+        return Number.isNaN(date.getTime())
+          ? 'Termin nicht verfügbar'
+          : new Intl.DateTimeFormat('de-DE', { dateStyle: 'full', timeStyle: 'short' }).format(date);
+      };
+      const normalizeRole = role => role === 'DPS' ? 'DD' : String(role || '—');
+      const getRolePreferences = signup => {
+        const offered = Array.isArray(signup?.role_preferences) ? signup.role_preferences : [];
+        const valid = [...new Set(offered.map(normalizeRole).filter(role => ['Tank', 'Heiler', 'DD'].includes(role)))];
+        const currentRole = normalizeRole(signup?.role);
+        if (!valid.length && ['Tank', 'Heiler', 'DD'].includes(currentRole)) valid.push(currentRole);
+        return valid;
+      };
+      const statusClass = status => status === 'Dabei' ? 'status-going' : (status === 'Ersatz' || status === 'Ersatzbank' ? 'status-bench' : 'status-declined');
+      const isValidSignup = item => item && item.approval_status === 'approved';
+      const getRaidName = raidId => state.raids.find(raid => raid.id === raidId)?.name || 'Unbekannter Raid';
+      const signupSorter = new Intl.Collator('de', { sensitivity: 'base', numeric: true });
+
+      function updateRoleOptions() {
+        const className = byId('characterClass').value;
+        const roleOptions = byId('roleOptions');
+        clear(roleOptions);
+        const roles = classRoles[className] || [];
+        if (!roles.length) {
+          roleOptions.append(text('span', 'Zuerst Klasse wählen.', 'field-hint'));
+          return;
+        }
+        for (const role of roles) {
+          const label = document.createElement('label');
+          label.className = 'role-choice';
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.name = 'roles';
+          checkbox.value = role;
+          label.append(checkbox, document.createTextNode(role));
+          roleOptions.append(label);
+        }
+      }
+
+      function makeStat(icon, value, label) {
+        const stat = document.createElement('div');
+        stat.className = 'stat';
+        stat.append(document.createTextNode(`${icon} `), text('strong', value), document.createTextNode(` ${label}`));
+        return stat;
+      }
+
+      function makeSignupRow(signup) {
+        const row = document.createElement('div');
+        row.className = 'signup-row';
+        const left = document.createElement('div');
+        left.className = 'player-cell';
+        left.append(text('div', signup.character_name || 'Unbekannt', 'player-name'));
+        const playerType = Object.hasOwn(playerTypeLabels, signup.player_type) ? signup.player_type : 'guest';
+        left.append(text('div', `${signup.class || 'Klasse offen'} · ${normalizeRole(signup.role)} · ${playerTypeLabels[playerType]}`, 'player-meta'));
+        const safeStatus = allowedStatuses.has(signup.status) ? signup.status : 'Dabei';
+        const statusLabel = safeStatus === 'Ersatz' ? 'Ersatzbank' : safeStatus;
+        const statusCell = text('div', statusLabel, `signup-cell status ${statusClass(safeStatus)}`);
+        statusCell.dataset.label = 'Status';
+        if (state.isLeader && ['Dabei', 'Ersatz', 'Ersatzbank'].includes(safeStatus)) {
+          row.classList.add('leader-row');
+          const targetStatus = safeStatus === 'Dabei' ? 'Ersatz' : 'Dabei';
+          const statusButton = text('button', statusLabel, safeStatus === 'Dabei' ? 'success' : 'bench');
+          statusButton.type = 'button';
+          statusButton.title = targetStatus === 'Dabei' ? 'Auf Dabei setzen' : 'Auf Ersatzbank setzen';
+          statusButton.setAttribute('aria-label', `${statusLabel}. Klicken, um auf ${targetStatus === 'Dabei' ? 'Dabei' : 'Ersatzbank'} zu wechseln.`);
+          statusButton.addEventListener('click', () => changeSignupStatus(signup.id, targetStatus, statusButton));
+          const rolePreferences = getRolePreferences(signup);
+          const typeSelect = document.createElement('select');
+          typeSelect.setAttribute('aria-label', `Spielerart für ${signup.character_name || 'Spieler'}`);
+          for (const [value, label] of Object.entries(playerTypeLabels)) typeSelect.append(new Option(label, value));
+          typeSelect.value = playerType;
+          typeSelect.addEventListener('change', () => changePlayerType(signup.id, typeSelect.value, playerType, typeSelect));
+          const cancelButton = text('button', 'Absagen', 'danger');
+          cancelButton.type = 'button';
+          cancelButton.addEventListener('click', () => cancelSignup(signup, cancelButton));
+          const roleCell = document.createElement('div');
+          roleCell.className = 'signup-cell';
+          roleCell.dataset.label = 'Rolle';
+          if (rolePreferences.length > 1) {
+            const roleSelect = document.createElement('select');
+            roleSelect.setAttribute('aria-label', `Endgültige Rolle für ${signup.character_name || 'Spieler'}`);
+            for (const role of rolePreferences) roleSelect.append(new Option(role, role));
+            roleSelect.value = rolePreferences.includes(normalizeRole(signup.role)) ? normalizeRole(signup.role) : rolePreferences[0];
+            roleSelect.addEventListener('change', () => changeFinalRole(signup.id, roleSelect.value, normalizeRole(signup.role), roleSelect));
+            roleCell.append(roleSelect);
+          } else {
+            roleCell.append(text('span', rolePreferences[0] || normalizeRole(signup.role), 'fixed-role'));
+          }
+          const typeCell = document.createElement('div');
+          typeCell.className = 'signup-cell';
+          typeCell.dataset.label = 'Typ';
+          typeCell.append(typeSelect);
+          const statusActionCell = document.createElement('div');
+          statusActionCell.className = 'signup-cell status-actions';
+          statusActionCell.dataset.label = 'Status';
+          statusActionCell.append(statusButton, cancelButton);
+          row.append(left, roleCell, typeCell, statusActionCell);
+          return row;
+        }
+        row.append(left, statusCell);
+        return row;
+      }
+
+      function makeRosterGroup(label, signups) {
+        const group = document.createElement('section');
+        group.className = 'roster-group';
+        const title = document.createElement('div');
+        title.className = 'roster-group-title';
+        title.append(text('span', label), text('span', String(signups.length), 'count-pill'));
+        group.append(title);
+        if (!signups.length) {
+          group.append(text('p', 'Noch niemand eingeteilt.', 'roster-group-empty'));
+          return group;
+        }
+        if (state.isLeader) {
+          const header = document.createElement('div');
+          header.className = 'signup-table-head';
+          for (const label of ['Spieler', 'Rolle', 'Typ', 'Status']) header.append(text('span', label));
+          group.append(header);
+        }
+        const statusRank = status => status === 'Dabei' ? 0 : (status === 'Ersatz' || status === 'Ersatzbank' ? 1 : 2);
+        const sorted = [...signups].sort((a, b) => {
+          const rankDifference = statusRank(a.status) - statusRank(b.status);
+          return rankDifference || signupSorter.compare(a.character_name || '', b.character_name || '');
+        });
+        for (const signup of sorted) group.append(makeSignupRow(signup));
+        return group;
+      }
+
+      function renderRaids() {
+        clear(elements.grid);
+        if (!state.raids.length) {
+          elements.grid.append(text('div', 'Noch keine Raids geplant. Die Raidleitung kann den ersten Termin erstellen.', 'empty'));
+          return;
+        }
+
+        for (const raid of state.raids) {
+          const entries = state.approvedSignups.filter(signup => signup.raid_id === raid.id && isValidSignup(signup));
+          const activeEntries = entries.filter(signup => ['Dabei', 'Ersatz', 'Ersatzbank'].includes(signup.status));
+          const going = activeEntries.filter(signup => signup.status === 'Dabei');
+          const counts = { Tank: 0, Heiler: 0, DD: 0 };
+          for (const signup of going) {
+            const role = normalizeRole(signup.role);
+            if (Object.hasOwn(counts, role)) counts[role] += 1;
+          }
+
+          const card = document.createElement('article');
+          card.className = 'card';
+          const header = document.createElement('div');
+          header.className = 'raid-card-header';
+          header.tabIndex = 0;
+          header.setAttribute('role', 'button');
+          const bodyId = `raid-body-${raid.id}`;
+          header.setAttribute('aria-controls', bodyId);
+          header.append(text('div', formatDate(raid.starts_at), 'card-date'));
+          header.append(text('h2', raid.name || 'Raid'));
+          header.append(text('p', raid.note || 'Keine Zusatzinfos', 'card-note'));
+          header.append(text('span', '⌄', 'raid-toggle-indicator'));
+
+          const body = document.createElement('div');
+          body.className = 'raid-card-body';
+          body.id = bodyId;
+          const collapsed = state.collapsedRaids.has(raid.id);
+          body.hidden = collapsed;
+          card.classList.toggle('collapsed', collapsed);
+          header.setAttribute('aria-expanded', String(!collapsed));
+          const toggleRaid = () => {
+            const willCollapse = !body.hidden;
+            body.hidden = willCollapse;
+            card.classList.toggle('collapsed', willCollapse);
+            header.setAttribute('aria-expanded', String(!willCollapse));
+            if (willCollapse) state.collapsedRaids.add(raid.id);
+            else state.collapsedRaids.delete(raid.id);
+          };
+          header.addEventListener('click', toggleRaid);
+          header.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              toggleRaid();
+            }
+          });
+
+          const top = document.createElement('div');
+          top.className = 'raid-card-body-top';
+
+          const stats = document.createElement('div');
+          stats.className = 'stats';
+          const capacity = Number.isFinite(Number(raid.capacity)) ? Number(raid.capacity) : '—';
+          stats.append(makeStat('👥', `${going.length}/${capacity}`, 'Dabei'));
+          stats.append(makeStat('🛡', counts.Tank, counts.Tank === 1 ? 'Tank' : 'Tanks'));
+          stats.append(makeStat('✚', counts.Heiler, 'Heiler'));
+          stats.append(makeStat('⚔', counts.DD, 'DD'));
+          top.append(stats);
+
+          const actions = document.createElement('div');
+          actions.className = 'actions card-actions';
+          const signupButton = text('button', state.isMember ? 'Als Mitglied anmelden' : 'Gastanfrage stellen');
+          signupButton.type = 'button';
+          signupButton.addEventListener('click', () => openSignup(raid));
+          actions.append(signupButton);
+
+          if (state.isLeader) {
+            const editButton = text('button', 'Bearbeiten', 'secondary');
+            editButton.type = 'button';
+            editButton.addEventListener('click', () => openRaidEditor(raid));
+            const deleteButton = text('button', 'Löschen', 'danger');
+            deleteButton.type = 'button';
+            deleteButton.addEventListener('click', () => deleteRaid(raid));
+            actions.append(editButton, deleteButton);
+          }
+          top.append(actions);
+
+          const roster = document.createElement('div');
+          roster.className = 'roster';
+          const rosterTitle = document.createElement('div');
+          rosterTitle.className = 'section-title';
+          rosterTitle.append(text('strong', 'Bestätigter Kader'), text('span', `${activeEntries.length} Spieler`, 'count-pill'));
+          roster.append(rosterTitle);
+          if (activeEntries.length) {
+            const roleGroups = [
+              ['Tanks', activeEntries.filter(signup => normalizeRole(signup.role) === 'Tank')],
+              ['Heiler', activeEntries.filter(signup => normalizeRole(signup.role) === 'Heiler')],
+              ['DDs', activeEntries.filter(signup => normalizeRole(signup.role) === 'DD')]
+            ];
+            const knownRoles = new Set(['Tank', 'Heiler', 'DD']);
+            const unassigned = activeEntries.filter(signup => !knownRoles.has(normalizeRole(signup.role)));
+            for (const [label, groupEntries] of roleGroups) roster.append(makeRosterGroup(label, groupEntries));
+            if (unassigned.length) roster.append(makeRosterGroup('Ohne gültige Rolle', unassigned));
+          } else {
+            roster.append(text('p', 'Noch keine genehmigten Teilnehmer.', 'player-meta'));
+          }
+          body.append(top, roster);
+          card.append(header, body);
+          elements.grid.append(card);
+        }
+      }
+
+      function renderLeaderPanel() {
+        elements.leaderPanel.classList.toggle('hidden', !state.isLeader);
+        if (!state.isLeader) {
+          clear(elements.requestList);
+          clear(elements.memberRequestList);
+          return;
+        }
+        clear(elements.requestList);
+        const pending = state.pendingSignups.filter(signup => signup.approval_status === 'pending');
+        elements.pendingCount.textContent = `${pending.length} offen`;
+        if (!pending.length) {
+          elements.requestList.append(text('div', 'Aktuell sind keine Gastanfragen offen.', 'empty'));
+        } else {
+          for (const signup of pending) {
+          const rolePreferences = getRolePreferences(signup);
+          const request = document.createElement('article');
+          request.className = 'request';
+          const info = document.createElement('div');
+          info.append(text('div', getRaidName(signup.raid_id), 'request-raid'));
+          info.append(text('div', signup.character_name || 'Unbekannt', 'player-name'));
+          const pendingType = Object.hasOwn(playerTypeLabels, signup.player_type) ? playerTypeLabels[signup.player_type] : 'Gast';
+          info.append(text('div', `${signup.class || 'Klasse offen'} · Rollenangebot: ${rolePreferences.join(', ')} · ${pendingType}`, 'player-meta'));
+          const actions = document.createElement('div');
+          actions.className = 'actions';
+          let roleControl;
+          if (rolePreferences.length > 1) {
+            roleControl = document.createElement('select');
+            roleControl.setAttribute('aria-label', `Endgültige Rolle für ${signup.character_name || 'Spieler'}`);
+            for (const role of rolePreferences) roleControl.append(new Option(role, role));
+            roleControl.value = rolePreferences.includes(normalizeRole(signup.role)) ? normalizeRole(signup.role) : rolePreferences[0];
+          } else {
+            roleControl = text('span', rolePreferences[0] || normalizeRole(signup.role), 'fixed-role');
+          }
+          const selectedRole = () => rolePreferences.length > 1 ? roleControl.value : rolePreferences[0];
+          const reviewControls = rolePreferences.length > 1 ? [roleControl] : [];
+          const approve = text('button', 'Freigeben', 'success');
+          approve.type = 'button';
+          approve.addEventListener('click', () => reviewSignup(signup.id, 'approved', 'Dabei', selectedRole(), [...reviewControls, approve, bench, reject]));
+          const bench = text('button', 'Ersatzbank', 'secondary');
+          bench.type = 'button';
+          bench.addEventListener('click', () => reviewSignup(signup.id, 'approved', 'Ersatz', selectedRole(), [...reviewControls, approve, bench, reject]));
+          const reject = text('button', 'Ablehnen', 'danger');
+          reject.type = 'button';
+          reject.addEventListener('click', () => reviewSignup(signup.id, 'rejected', 'Dabei', selectedRole(), [...reviewControls, approve, bench, reject]));
+          actions.append(roleControl, approve, bench, reject);
+          request.append(info, actions);
+          elements.requestList.append(request);
+          }
+        }
+
+        clear(elements.memberRequestList);
+        const memberRequests = state.memberRequests.filter(request => request.approval_status === 'pending');
+        elements.memberRequestCount.textContent = `${memberRequests.length} offen`;
+        if (!memberRequests.length) {
+          elements.memberRequestList.append(text('div', 'Aktuell sind keine Discord-Mitgliedsanfragen offen.', 'empty'));
+        } else {
+          for (const memberRequest of memberRequests) {
+            const request = document.createElement('article');
+            request.className = 'request';
+            const info = document.createElement('div');
+            info.append(text('div', memberRequest.discord_name || 'Discord-Nutzer', 'player-name'));
+            info.append(text('div', 'Discord-Konto wartet auf einmalige Mitgliedsfreigabe.', 'player-meta'));
+            const actions = document.createElement('div');
+            actions.className = 'actions';
+            const approve = text('button', 'Als Mitglied freigeben', 'success');
+            const reject = text('button', 'Ablehnen', 'danger');
+            approve.type = reject.type = 'button';
+            approve.addEventListener('click', () => reviewMemberRequest(memberRequest.user_id, 'approved', [approve, reject]));
+            reject.addEventListener('click', () => reviewMemberRequest(memberRequest.user_id, 'rejected', [approve, reject]));
+            actions.append(approve, reject);
+            request.append(info, actions);
+            elements.memberRequestList.append(request);
+          }
+        }
+      }
+
+      function renderAll() {
+        const authenticated = Boolean(state.user);
+        elements.memberLoginBtn.classList.toggle('hidden', authenticated);
+        elements.loginBtn.classList.toggle('hidden', authenticated);
+        elements.newRaidBtn.classList.toggle('hidden', !state.isLeader);
+        elements.logoutBtn.classList.toggle('hidden', !authenticated);
+        elements.accountStatus.classList.toggle('hidden', !authenticated);
+        elements.accountStatus.textContent = state.isLeader
+          ? 'Raidleitung'
+          : state.isMember
+            ? 'Discord-Mitglied'
+            : state.memberStatus === 'pending'
+              ? 'Discord: Freigabe offen'
+              : 'Discord: nicht freigegeben';
+        renderLeaderPanel();
+        renderRaids();
+      }
+
+      async function loadPublicData() {
+        const [raidResult, signupResult] = await Promise.all([
+          state.db.from('raids').select('*').order('starts_at', { ascending: true }),
+          state.db.from('signups').select('*').eq('approval_status', 'approved').order('created_at', { ascending: true })
+        ]);
+        if (raidResult.error || signupResult.error) throw new Error('public-load');
+        state.raids = raidResult.data || [];
+        state.approvedSignups = (signupResult.data || []).filter(isValidSignup);
+      }
+
+      async function loadLeaderData() {
+        if (!state.isLeader) {
+          state.pendingSignups = [];
+          state.memberRequests = [];
+          return;
+        }
+        const [signupResult, memberResult] = await Promise.all([
+          state.db.from('signups').select('*').eq('approval_status', 'pending').order('created_at', { ascending: true }),
+          state.db.from('member_requests').select('*').eq('approval_status', 'pending').order('created_at', { ascending: true })
+        ]);
+        if (signupResult.error || memberResult.error) throw new Error('leader-load');
+        state.pendingSignups = signupResult.data || [];
+        state.memberRequests = memberResult.data || [];
+      }
+
+      async function refreshData() {
+        try {
+          await loadPublicData();
+          await loadLeaderData();
+          renderAll();
+        } catch (_error) {
+          showNotice('Die Raid-Daten konnten nicht geladen werden. Bitte prüfe die Verbindung und versuche es später erneut.', 'error');
+          renderAll();
+        }
+      }
+
+      async function verifyLeader() {
+        try {
+          const userResult = await state.db.auth.getUser();
+          if (userResult.error || !userResult.data.user) return false;
+          const permissionResult = await state.db.rpc('is_raid_leader');
+          return !permissionResult.error && permissionResult.data === true;
+        } catch (_error) {
+          return false;
+        }
+      }
+
+      async function syncAuthentication() {
+        const userResult = await state.db.auth.getUser();
+        state.user = userResult.error ? null : userResult.data.user;
+        state.isLeader = false;
+        state.isMember = false;
+        state.memberStatus = 'none';
+        if (state.user) {
+          const [leaderResult, memberResult, statusResult] = await Promise.all([
+            state.db.rpc('is_raid_leader'),
+            state.db.rpc('is_member'),
+            state.db.rpc('member_status')
+          ]);
+          state.isLeader = !leaderResult.error && leaderResult.data === true;
+          state.isMember = !memberResult.error && memberResult.data === true;
+          state.memberStatus = statusResult.error ? 'none' : (statusResult.data || 'none');
+          const isDiscordUser = state.user.app_metadata?.provider === 'discord'
+            || state.user.identities?.some(identity => identity.provider === 'discord');
+          if (isDiscordUser && state.memberStatus === 'none') {
+            const requestResult = await state.db.rpc('request_membership');
+            if (!requestResult.error) state.memberStatus = requestResult.data || 'pending';
+          }
+        }
+        if (!state.isLeader) {
+          state.pendingSignups = [];
+          state.memberRequests = [];
+        }
+        await refreshData();
+      }
+
+      function openSignup(raid) {
+        state.activeRaidId = raid.id;
+        byId('signupTitle').textContent = state.isMember ? 'Als Mitglied anmelden' : 'Gastanfrage stellen';
+        byId('signupRaidTitle').textContent = raid.name || 'Raid';
+        byId('signupFormNote').textContent = state.isMember
+          ? 'Mit einer Rolle wirst du sofort bestätigt. Bei mehreren angebotenen Rollen legt die Raidleitung deine endgültige Rolle fest.'
+          : 'Deine Gastanfrage wird als Dabei und zunächst ausstehend gespeichert. Sie zählt erst nach Freigabe zum Kader.';
+        byId('signupForm').reset();
+        updateRoleOptions();
+        openDialog(byId('signupDialog'));
+        byId('charName').focus();
+      }
+
+      function openRaidEditor(raid = null) {
+        if (!state.isLeader) return;
+        state.editRaidId = raid?.id || null;
+        const form = byId('raidForm');
+        form.reset();
+        const capacitySelect = byId('raidCapacity');
+        capacitySelect.querySelectorAll('[data-custom]').forEach(option => option.remove());
+        byId('raidDialogTitle').textContent = raid ? 'Raid bearbeiten' : 'Raid erstellen';
+        if (raid) {
+          byId('raidName').value = raid.name || '';
+          const date = new Date(raid.starts_at);
+          if (!Number.isNaN(date.getTime())) {
+            const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+            byId('raidDate').value = local;
+          }
+          const capacity = Number(raid.capacity) || 40;
+          if (![10, 20, 25, 40].includes(capacity)) {
+            const existingOption = new Option(`${capacity} Spieler (bestehend)`, String(capacity));
+            existingOption.dataset.custom = 'true';
+            capacitySelect.append(existingOption);
+          }
+          capacitySelect.value = String(capacity);
+          byId('raidNote').value = raid.note || '';
+        } else {
+          byId('raidCapacity').value = 40;
+        }
+        openDialog(byId('raidDialog'));
+      }
+
+      async function reviewSignup(id, decision, signupStatus, finalRole, controls) {
+        if (!state.isLeader || !id || !['approved', 'rejected'].includes(decision) || !['Dabei', 'Ersatz'].includes(signupStatus) || !['Tank', 'Heiler', 'DD'].includes(finalRole)) return;
+        controls.forEach(control => { control.disabled = true; });
+        try {
+          const result = await state.db
+            .from('signups')
+            .update({ approval_status: decision, status: signupStatus, role: finalRole })
+            .eq('id', id)
+            .eq('approval_status', 'pending')
+            .select('id')
+            .maybeSingle();
+          if (result.error) throw new Error('review');
+          if (!result.data) throw new Error('already-reviewed');
+          const message = decision === 'rejected'
+            ? 'Die Gastanfrage wurde abgelehnt.'
+            : signupStatus === 'Ersatz'
+              ? 'Die Gastanfrage wurde für die Ersatzbank freigegeben.'
+              : 'Die Gastanfrage wurde freigegeben.';
+          showNotice(message, 'ok');
+          await refreshData();
+        } catch (_error) {
+          showNotice('Die Gastanfrage konnte nicht bearbeitet werden. Sie wurde eventuell bereits geprüft. Bitte lade die Daten neu und kontrolliere deine Berechtigung.', 'error');
+          controls.forEach(control => { control.disabled = false; });
+        }
+      }
+
+      async function reviewMemberRequest(userId, decision, controls) {
+        if (!state.isLeader || !userId || !['approved', 'rejected'].includes(decision)) return;
+        controls.forEach(control => { control.disabled = true; });
+        try {
+          const result = await state.db
+            .from('member_requests')
+            .update({ approval_status: decision, reviewed_at: new Date().toISOString() })
+            .eq('user_id', userId)
+            .eq('approval_status', 'pending')
+            .select('user_id')
+            .maybeSingle();
+          if (result.error || !result.data) throw new Error('member-review');
+          showNotice(decision === 'approved'
+            ? 'Das Discord-Konto wurde als MUAZCO-Mitglied freigegeben.'
+            : 'Die Discord-Mitgliedsanfrage wurde abgelehnt.', 'ok');
+          await refreshData();
+        } catch (_error) {
+          controls.forEach(control => { control.disabled = false; });
+          showNotice('Die Mitgliedsanfrage konnte nicht bearbeitet werden. Bitte lade die Daten neu und prüfe deine Berechtigung.', 'error');
+        }
+      }
+
+      async function changeSignupStatus(id, targetStatus, button) {
+        if (!state.isLeader || !id || !['Dabei', 'Ersatz'].includes(targetStatus)) return;
+        button.disabled = true;
+        try {
+          const result = await state.db
+            .from('signups')
+            .update({ status: targetStatus })
+            .eq('id', id)
+            .eq('approval_status', 'approved')
+            .select('id')
+            .maybeSingle();
+          if (result.error || !result.data) throw new Error('status-change');
+          showNotice(targetStatus === 'Dabei'
+            ? 'Der Spieler wurde auf „Dabei“ gesetzt.'
+            : 'Der Spieler wurde auf die Ersatzbank gesetzt.', 'ok');
+          await refreshData();
+        } catch (_error) {
+          showNotice('Der Teilnehmerstatus konnte nicht geändert werden. Bitte prüfe deine Raidleiter-Berechtigung und lade die Daten neu.', 'error');
+          button.disabled = false;
+        }
+      }
+
+      async function cancelSignup(signup, button) {
+        if (!state.isLeader || !signup?.id || !['Dabei', 'Ersatz', 'Ersatzbank'].includes(signup.status)) return;
+        const characterName = signup.character_name || 'Dieser Spieler';
+        if (!window.confirm(`„${characterName}“ endgültig für diesen Raid absagen? Der Spieler wird aus dem aktiven Kader entfernt.`)) return;
+        button.disabled = true;
+        try {
+          const result = await state.db
+            .from('signups')
+            .update({ status: 'Abgesagt' })
+            .eq('id', signup.id)
+            .eq('approval_status', 'approved')
+            .in('status', ['Dabei', 'Ersatz', 'Ersatzbank'])
+            .select('id')
+            .maybeSingle();
+          if (result.error || !result.data) throw new Error('cancel-signup');
+          showNotice(`${characterName} wurde endgültig abgesagt und aus dem aktiven Kader entfernt.`, 'ok');
+          await refreshData();
+        } catch (_error) {
+          button.disabled = false;
+          showNotice('Der Spieler konnte nicht abgesagt werden. Bitte prüfe deine Raidleiter-Berechtigung und lade die Daten neu.', 'error');
+        }
+      }
+
+      async function changeFinalRole(id, targetRole, previousRole, select) {
+        if (!state.isLeader || !id || !['Tank', 'Heiler', 'DD'].includes(targetRole)) return;
+        select.disabled = true;
+        try {
+          const result = await state.db
+            .from('signups')
+            .update({ role: targetRole })
+            .eq('id', id)
+            .eq('approval_status', 'approved')
+            .select('id')
+            .maybeSingle();
+          if (result.error || !result.data) throw new Error('role-change');
+          showNotice(`Die endgültige Rolle wurde auf „${targetRole}“ gesetzt.`, 'ok');
+          await refreshData();
+        } catch (_error) {
+          select.value = previousRole;
+          select.disabled = false;
+          showNotice('Die endgültige Rolle konnte nicht geändert werden. Sie muss im ursprünglichen Rollenangebot enthalten sein.', 'error');
+        }
+      }
+
+      async function changePlayerType(id, targetType, previousType, select) {
+        if (!state.isLeader || !id || !Object.hasOwn(playerTypeLabels, targetType)) return;
+        select.disabled = true;
+        try {
+          const result = await state.db
+            .from('signups')
+            .update({ player_type: targetType })
+            .eq('id', id)
+            .eq('approval_status', 'approved')
+            .select('id')
+            .maybeSingle();
+          if (result.error || !result.data) throw new Error('type-change');
+          showNotice(`Die Spielerart wurde auf „${playerTypeLabels[targetType]}“ gesetzt.`, 'ok');
+          await refreshData();
+        } catch (_error) {
+          select.value = previousType;
+          select.disabled = false;
+          showNotice('Die Spielerart konnte nicht geändert werden. Bitte prüfe deine Raidleiter-Berechtigung und lade die Daten neu.', 'error');
+        }
+      }
+
+      async function deleteRaid(raid) {
+        if (!state.isLeader || !raid?.id) return;
+        if (!window.confirm(`„${raid.name || 'Raid'}“ und alle zugehörigen Anmeldungen endgültig löschen?`)) return;
+        try {
+          const result = await state.db.from('raids').delete().eq('id', raid.id);
+          if (result.error) throw new Error('delete');
+          showNotice('Der Raid wurde gelöscht.', 'ok');
+          await refreshData();
+        } catch (_error) {
+          showNotice('Der Raid konnte nicht gelöscht werden. Bitte prüfe deine Berechtigung.', 'error');
+        }
+      }
+
+      elements.memberLoginBtn.addEventListener('click', async () => {
+        if (!['http:', 'https:'].includes(window.location.protocol)) {
+          showNotice('Der Discord-Login benötigt eine veröffentlichte HTTP- oder HTTPS-Adresse. Eine direkt geöffnete lokale Datei kann nicht als OAuth-Rücksprungziel verwendet werden.', 'error');
+          return;
+        }
+        elements.memberLoginBtn.disabled = true;
+        const redirectTo = `${window.location.origin}${window.location.pathname}`;
+        const result = await state.db.auth.signInWithOAuth({
+          provider: 'discord',
+          options: { redirectTo, scopes: 'identify email' }
+        });
+        if (result.error) {
+          elements.memberLoginBtn.disabled = false;
+          showNotice('Der Discord-Login konnte nicht gestartet werden. Bitte prüfe die Discord-Einstellungen in Supabase.', 'error');
+        }
+      });
+      elements.loginBtn.addEventListener('click', () => openDialog(byId('loginDialog')));
+      elements.newRaidBtn.addEventListener('click', () => openRaidEditor());
+      elements.logoutBtn.addEventListener('click', async () => {
+        try {
+          await state.db.auth.signOut();
+        } finally {
+          state.user = null;
+          state.isLeader = false;
+          state.isMember = false;
+          state.memberStatus = 'none';
+          state.pendingSignups = [];
+          state.memberRequests = [];
+          await refreshData();
+          showNotice('Du wurdest sicher ausgeloggt.', 'ok');
+        }
+      });
+      byId('characterClass').addEventListener('change', updateRoleOptions);
+      byId('raidDate').addEventListener('click', event => {
+        if (typeof event.currentTarget.showPicker === 'function') {
+          try { event.currentTarget.showPicker(); } catch (_error) { /* Browser nutzt seine normale Datumsauswahl. */ }
+        }
+      });
+      document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => closeDialog(button.closest('dialog'))));
+      document.querySelectorAll('dialog').forEach(dialog => {
+        let pointerStartedOnBackdrop = false;
+        dialog.addEventListener('pointerdown', event => { pointerStartedOnBackdrop = event.target === dialog; });
+        dialog.addEventListener('click', event => {
+          if (pointerStartedOnBackdrop && event.target === dialog) closeDialog(dialog);
+          pointerStartedOnBackdrop = false;
+        });
+      });
+
+      byId('loginForm').addEventListener('submit', async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const submit = form.querySelector('[type="submit"]');
+        submit.dataset.label = 'Sicher einloggen';
+        setBusy(form, true);
+        try {
+          const login = await state.db.auth.signInWithPassword({ email: byId('email').value.trim(), password: byId('password').value });
+          if (login.error) throw new Error('login');
+          const allowed = await verifyLeader();
+          if (!allowed) {
+            await state.db.auth.signOut();
+            throw new Error('permission');
+          }
+          state.user = login.data.user;
+          state.isLeader = true;
+          byId('password').value = '';
+          closeDialog(byId('loginDialog'));
+          await refreshData();
+          showNotice('Als MUAZCO-Raidleitung angemeldet.', 'ok');
+        } catch (error) {
+          const message = error.message === 'permission'
+            ? 'Dieses Konto besitzt keine Raidleiter-Berechtigung.'
+            : 'Login fehlgeschlagen. Bitte prüfe E-Mail und Passwort.';
+          showNotice(message, 'error');
+        } finally {
+          setBusy(form, false);
+        }
+      });
+
+      byId('signupForm').addEventListener('submit', async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const className = byId('characterClass').value;
+        const roles = [...form.querySelectorAll('input[name="roles"]:checked')].map(input => input.value);
+        const characterName = byId('charName').value.trim();
+        const allowedRoles = classRoles[className] || [];
+        if (!state.activeRaidId || !characterName || !roles.length || roles.some(role => !allowedRoles.includes(role))) {
+          showNotice('Bitte fülle Name und Klasse aus und wähle mindestens eine passende Rolle.', 'error');
+          return;
+        }
+        const submit = form.querySelector('[type="submit"]');
+        submit.dataset.label = 'Anfrage senden';
+        setBusy(form, true);
+        try {
+          const isDirectMemberSignup = state.isMember && roles.length === 1;
+          const payload = {
+            raid_id: state.activeRaidId,
+            character_name: characterName,
+            class: className,
+            role: roles[0],
+            role_preferences: roles,
+            status: 'Dabei',
+            player_type: state.isMember ? 'member' : 'guest',
+            approval_status: isDirectMemberSignup ? 'approved' : 'pending',
+            user_id: state.isMember ? state.user.id : null
+          };
+          const result = await state.db.from('signups').insert(payload);
+          if (result.error) throw new Error('insert');
+          closeDialog(byId('signupDialog'));
+          form.reset();
+          updateRoleOptions();
+          const successMessage = isDirectMemberSignup
+            ? 'Du wurdest als Mitglied direkt in den bestätigten Kader eingetragen.'
+            : state.isMember
+              ? 'Deine Mehrrollen-Anmeldung wurde gesendet. Die Raidleitung legt deine endgültige Rolle fest.'
+              : 'Deine Gastanfrage wurde gesendet. Sie erscheint nach Freigabe durch die Raidleitung im Kader.';
+          showNotice(successMessage, 'ok');
+          if (state.isLeader || isDirectMemberSignup) await refreshData();
+        } catch (_error) {
+          showNotice(friendlyError('Die Anfrage konnte nicht gesendet werden. Möglicherweise besteht für diesen Charakter bereits eine Anfrage.'), 'error');
+        } finally {
+          setBusy(form, false);
+        }
+      });
+
+      byId('raidForm').addEventListener('submit', async event => {
+        event.preventDefault();
+        if (!state.isLeader) return;
+        const form = event.currentTarget;
+        const localDate = new Date(byId('raidDate').value);
+        const capacity = Number(byId('raidCapacity').value);
+        if (Number.isNaN(localDate.getTime()) || !Number.isInteger(capacity) || capacity < 1 || capacity > 100) {
+          showNotice('Bitte wähle einen gültigen Termin und eine gültige Raidgröße.', 'error');
+          return;
+        }
+        const submit = form.querySelector('[type="submit"]');
+        submit.dataset.label = 'Raid speichern';
+        setBusy(form, true);
+        try {
+          const payload = {
+            name: byId('raidName').value.trim(),
+            starts_at: localDate.toISOString(),
+            capacity,
+            note: byId('raidNote').value.trim()
+          };
+          const query = state.editRaidId
+            ? state.db.from('raids').update(payload).eq('id', state.editRaidId)
+            : state.db.from('raids').insert(payload);
+          const result = await query;
+          if (result.error) throw new Error('save');
+          closeDialog(byId('raidDialog'));
+          showNotice('Der Raid wurde gespeichert.', 'ok');
+          await refreshData();
+        } catch (_error) {
+          showNotice('Der Raid konnte nicht gespeichert werden. Bitte prüfe deine Raidleiter-Berechtigung.', 'error');
+        } finally {
+          setBusy(form, false);
+        }
+      });
+
+      async function start() {
+        const configured = typeof config.url === 'string' && /^https:\/\//.test(config.url) && typeof config.anonKey === 'string' && config.anonKey.length > 20;
+        if (!configured) {
+          elements.grid.replaceChildren(text('div', 'Die Seite ist fertig. Lege deine bestehende config.js mit FOREVER_CONFIG.url und FOREVER_CONFIG.anonKey neben diese index.html.', 'empty'));
+          elements.loginBtn.disabled = true;
+          return;
+        }
+        if (!window.supabase?.createClient) {
+          elements.grid.replaceChildren(text('div', 'Die Supabase-Bibliothek konnte nicht geladen werden. Bitte prüfe die Internetverbindung und lade die Seite neu.', 'empty'));
+          elements.loginBtn.disabled = true;
+          return;
+        }
+        try {
+          state.db = window.supabase.createClient(config.url, config.anonKey);
+          state.db.auth.onAuthStateChange(() => { window.setTimeout(syncAuthentication, 0); });
+          await syncAuthentication();
+        } catch (_error) {
+          showNotice('Die Verbindung konnte nicht gestartet werden. Bitte prüfe die Einstellungen in config.js.', 'error');
+          elements.loginBtn.disabled = true;
+        }
+      }
+
+      start();
+    })();
+  </script>
+</body>
+</html>
