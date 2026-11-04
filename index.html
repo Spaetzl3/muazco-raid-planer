@@ -114,7 +114,8 @@
       pointer-events: none;
     }
     #message .notice { margin: 0; box-shadow: var(--shadow); pointer-events: auto; }
-    .notice { margin: 0 0 24px; padding: 13px 16px; border: 1px solid rgb(229 183 91 / 26%); border-left: 4px solid var(--gold); border-radius: 8px; background: rgb(229 183 91 / 7%); line-height: 1.45; }
+    .notice { margin: 0 0 24px; padding: 13px 16px; border: 1px solid rgb(229 183 91 / 26%); border-left: 4px solid var(--gold); border-radius: 8px; background: rgb(229 183 91 / 7%); line-height: 1.45; transition: opacity .2s ease, transform .2s ease; }
+    .notice.notice-leaving { opacity: 0; transform: translateY(-6px); }
     .notice.error { border-color: rgb(239 133 130 / 30%); border-left-color: var(--red); color: #ffc0bd; background: rgb(239 133 130 / 8%); }
     .notice.ok { border-color: rgb(112 198 144 / 30%); border-left-color: var(--green); color: #bff1ce; background: rgb(112 198 144 / 8%); }
 
@@ -206,6 +207,18 @@
       text-transform: uppercase;
     }
     .roster-group-empty { margin: 9px 0 0; color: var(--muted); font-size: 12px; }
+    .player-identity { display: grid; grid-template-columns: 36px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0; }
+    .class-icon {
+      display: block;
+      width: 36px;
+      height: 36px;
+      border: 1px solid rgb(229 183 91 / 35%);
+      border-radius: 8px;
+      object-fit: cover;
+      background: var(--surface-3);
+      box-shadow: 0 4px 12px rgb(0 0 0 / 28%);
+    }
+    .class-icon-fallback { display: grid; place-items: center; color: var(--muted); font-size: 13px; font-weight: 900; }
     .player-name { overflow-wrap: anywhere; font-weight: 750; }
     .player-meta { margin-top: 3px; color: var(--muted); font-size: 12px; }
     .status { font-size: 12px; font-weight: 800; }
@@ -488,6 +501,17 @@
         'Schamane': ['Heiler', 'DD'],
         'Schurke': ['DD']
       });
+      const classIconFiles = Object.freeze({
+        'Druide': 'druid.jpg',
+        'Hexenmeister': 'warlock.jpg',
+        'Jäger': 'hunter.jpg',
+        'Krieger': 'warrior.jpg',
+        'Magier': 'mage.jpg',
+        'Paladin': 'paladin.jpg',
+        'Priester': 'priest.jpg',
+        'Schamane': 'shaman.jpg',
+        'Schurke': 'rogue.jpg'
+      });
       const allowedStatuses = new Set(['Dabei', 'Ersatz', 'Ersatzbank', 'Abgesagt']);
       const playerTypeLabels = Object.freeze({ guest: 'Gast', member: 'Mitglied' });
       const state = {
@@ -519,10 +543,23 @@
         const submit = form.querySelector('[type="submit"]');
         if (submit) submit.textContent = busy ? 'Bitte warten …' : submit.dataset.label || submit.textContent.replace('Bitte warten …', 'Speichern');
       };
+      let noticeTimer = null;
       const showNotice = (message, type = '') => {
+        if (noticeTimer) window.clearTimeout(noticeTimer);
+        noticeTimer = null;
         clear(elements.message);
         const box = text('div', message, `notice ${type}`.trim());
         elements.message.append(box);
+        if (type === 'ok') {
+          noticeTimer = window.setTimeout(() => {
+            if (!box.isConnected) return;
+            box.classList.add('notice-leaving');
+            window.setTimeout(() => {
+              if (box.isConnected) box.remove();
+            }, 200);
+            noticeTimer = null;
+          }, 5800);
+        }
       };
       const closeDialog = dialog => { if (dialog && dialog.open) dialog.close(); };
       const openDialog = dialog => { if (dialog && !dialog.open) dialog.showModal(); };
@@ -573,14 +610,39 @@
         return stat;
       }
 
+      function makePlayerIdentity(signup, metaText) {
+        const identity = document.createElement('div');
+        identity.className = 'player-identity';
+        const iconFile = classIconFiles[signup?.class];
+        if (iconFile) {
+          const icon = document.createElement('img');
+          icon.className = 'class-icon';
+          icon.src = `class-icons/${iconFile}`;
+          icon.alt = '';
+          icon.width = 36;
+          icon.height = 36;
+          icon.loading = 'lazy';
+          icon.decoding = 'async';
+          icon.setAttribute('aria-hidden', 'true');
+          identity.append(icon);
+        } else {
+          const fallback = text('span', '?', 'class-icon class-icon-fallback');
+          fallback.setAttribute('aria-hidden', 'true');
+          identity.append(fallback);
+        }
+        const details = document.createElement('div');
+        details.append(text('div', signup?.character_name || 'Unbekannt', 'player-name'));
+        details.append(text('div', metaText, 'player-meta'));
+        identity.append(details);
+        return identity;
+      }
+
       function makeSignupRow(signup) {
         const row = document.createElement('div');
         row.className = 'signup-row';
-        const left = document.createElement('div');
-        left.className = 'player-cell';
-        left.append(text('div', signup.character_name || 'Unbekannt', 'player-name'));
         const playerType = Object.hasOwn(playerTypeLabels, signup.player_type) ? signup.player_type : 'guest';
-        left.append(text('div', `${signup.class || 'Klasse offen'} · ${normalizeRole(signup.role)} · ${playerTypeLabels[playerType]}`, 'player-meta'));
+        const left = makePlayerIdentity(signup, `${signup.class || 'Klasse offen'} · ${normalizeRole(signup.role)} · ${playerTypeLabels[playerType]}`);
+        left.classList.add('player-cell');
         const safeStatus = allowedStatuses.has(signup.status) ? signup.status : 'Dabei';
         const statusLabel = safeStatus === 'Ersatz' ? 'Ersatzbank' : safeStatus;
         const statusCell = text('div', statusLabel, `signup-cell status ${statusClass(safeStatus)}`);
@@ -783,9 +845,8 @@
           request.className = 'request';
           const info = document.createElement('div');
           info.append(text('div', getRaidName(signup.raid_id), 'request-raid'));
-          info.append(text('div', signup.character_name || 'Unbekannt', 'player-name'));
           const pendingType = Object.hasOwn(playerTypeLabels, signup.player_type) ? playerTypeLabels[signup.player_type] : 'Gast';
-          info.append(text('div', `${signup.class || 'Klasse offen'} · Rollenangebot: ${rolePreferences.join(', ')} · ${pendingType}`, 'player-meta'));
+          info.append(makePlayerIdentity(signup, `${signup.class || 'Klasse offen'} · Rollenangebot: ${rolePreferences.join(', ')} · ${pendingType}`));
           const actions = document.createElement('div');
           actions.className = 'actions';
           let roleControl;
