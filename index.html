@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0d1117">
-  <meta name="description" content="MUAZCO Raid Planer 2.3 – Raids ansehen, Mitglieder anmelden und Kader verwalten.">
-  <title>MUAZCO · Raid Planer 2.3</title>
+  <meta name="description" content="MUAZCO Raid Planer 2.4 – Raids ansehen, Mitglieder anmelden und Kader verwalten.">
+  <title>MUAZCO · Raid Planer 2.4</title>
   <style>
     :root {
       color-scheme: dark;
@@ -227,10 +227,8 @@
     .status-declined { color: var(--muted); }
     .empty { grid-column: 1 / -1; padding: 48px 26px; border: 1px dashed #3d4c58; border-radius: 16px; color: var(--muted); background: rgb(17 24 32 / 48%); text-align: center; line-height: 1.55; }
 
-    .leader-panel { margin: 0 0 26px; padding: 20px; border: 1px solid rgb(117 185 231 / 28%); border-radius: 16px; background: rgb(117 185 231 / 6%); }
-    .leader-panel-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; }
-    .leader-panel h2 { margin: 0; font-size: 18px; }
-    .leader-panel p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+    .requests-button.has-pending { color: #18140c; background: linear-gradient(135deg, var(--gold-bright), var(--gold)); }
+    .requests-button .count-pill { margin-left: 5px; color: inherit; background: rgb(0 0 0 / 16%); }
     .request-list { display: grid; gap: 10px; }
     .request {
       display: grid;
@@ -246,6 +244,15 @@
     .request .actions { justify-content: flex-end; }
     .request button { min-height: 38px; padding: 8px 12px; font-size: 13px; }
     .request select { width: auto; min-height: 38px; padding: 7px 10px; font-size: 13px; }
+    .compact-empty { padding: 14px; border: 1px dashed #3d4c58; border-radius: 10px; color: var(--muted); background: rgb(17 24 32 / 48%); text-align: center; font-size: 13px; }
+    .dialog-section + .dialog-section { margin-top: 24px; padding-top: 22px; border-top: 1px solid var(--border); }
+    .dialog-section-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 12px; }
+    .dialog-section-head h3 { margin: 0; font-size: 17px; }
+    .dialog-section-head p { margin: 4px 0 0; font-size: 12px; }
+    .profile-summary { display: grid; gap: 6px; margin: 18px 0 0; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+    .profile-summary + .dialog-section { margin-top: 24px; padding-top: 22px; border-top: 1px solid var(--border); }
+    .profile-name { font-size: 18px; font-weight: 850; overflow-wrap: anywhere; }
+    .profile-role { color: var(--green); font-size: 13px; font-weight: 800; }
 
     dialog {
       width: min(520px, calc(100% - 28px));
@@ -258,6 +265,8 @@
       background: var(--surface);
       box-shadow: 0 30px 100px #000a;
     }
+    dialog.wide-dialog { width: min(940px, calc(100% - 28px)); }
+    dialog.profile-dialog { width: min(720px, calc(100% - 28px)); }
     dialog::backdrop { background: rgb(0 0 0 / 72%); backdrop-filter: blur(4px); }
     .dialog-body { padding: 26px; }
     dialog h2 { margin: 0 0 7px; font-size: 25px; }
@@ -345,16 +354,16 @@
 </head>
 <body>
   <header class="site-header">
-    <div class="brand" aria-label="MUAZCO Raid Planer 2.3">
+    <div class="brand" aria-label="MUAZCO Raid Planer 2.4">
       <img class="brand-mark" src="muazco-logo.png" alt="" width="60" height="60" aria-hidden="true">
-      <div><div class="brand-name">MUAZCO</div><small>RAID PLANER 2.3</small></div>
+      <div><div class="brand-name">MUAZCO</div><small>RAID PLANER 2.4</small></div>
     </div>
     <div class="top-actions">
-      <span id="accountStatus" class="account-pill hidden"></span>
       <button class="secondary" id="memberLoginBtn" type="button">Mit Discord anmelden</button>
       <button class="secondary" id="loginBtn" type="button">Raidleitung Login</button>
+      <button class="secondary requests-button hidden" id="requestsBtn" type="button">Anfragen <span id="requestsBadge" class="count-pill">0</span></button>
       <button id="newRaidBtn" class="hidden" type="button">+ Raid erstellen</button>
-      <button class="secondary hidden" id="logoutBtn" type="button">Logout</button>
+      <button class="secondary hidden" id="profileBtn" type="button">Mein Profil</button>
     </div>
   </header>
 
@@ -369,25 +378,55 @@
 
     <div id="message" role="status" aria-live="polite"></div>
 
-    <section id="leaderPanel" class="leader-panel hidden" aria-labelledby="leaderPanelTitle">
-      <div class="leader-panel-head">
-        <div><h2 id="leaderPanelTitle">Offene Gastanfragen</h2><p>Nur für bestätigte Raidleiter sichtbar.</p></div>
-        <span id="pendingCount" class="count-pill">0 offen</span>
-      </div>
-      <div id="requestList" class="request-list"></div>
-      <div class="leader-panel-head" style="margin-top:20px">
-        <div><h2>Discord-Mitgliedsanfragen</h2><p>Einmalige Freigabe für automatische Mitgliedsanmeldungen.</p></div>
-        <span id="memberRequestCount" class="count-pill">0 offen</span>
-      </div>
-      <div id="memberRequestList" class="request-list"></div>
-    </section>
-
     <section id="raidGrid" class="raid-grid" aria-label="Geplante Raids">
       <div class="empty">Raids werden geladen …</div>
     </section>
   </main>
 
-  <footer>MUAZCO · RAID PLANER 2.3 · 0,00 € Zusatzkosten</footer>
+  <footer>MUAZCO · RAID PLANER 2.4</footer>
+
+  <dialog id="requestsDialog" class="wide-dialog" aria-labelledby="requestsDialogTitle">
+    <div class="dialog-body">
+      <h2 id="requestsDialogTitle">Offene Anfragen</h2>
+      <p>Gast- und Mitgliedsanfragen an einer Stelle bearbeiten.</p>
+      <section class="dialog-section" aria-labelledby="guestRequestsTitle">
+        <div class="dialog-section-head">
+          <div><h3 id="guestRequestsTitle">Gastanfragen</h3><p>Anmeldungen prüfen und Rolle beziehungsweise Status festlegen.</p></div>
+          <span id="pendingCount" class="count-pill">0 offen</span>
+        </div>
+        <div id="requestList" class="request-list"></div>
+      </section>
+      <section class="dialog-section" aria-labelledby="memberRequestsTitle">
+        <div class="dialog-section-head">
+          <div><h3 id="memberRequestsTitle">Discord-Mitgliedsanfragen</h3><p>Einmalige Freigabe für automatische Mitgliedsanmeldungen.</p></div>
+          <span id="memberRequestCount" class="count-pill">0 offen</span>
+        </div>
+        <div id="memberRequestList" class="request-list"></div>
+      </section>
+      <div class="actions"><button type="button" class="secondary" data-close>Schließen</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="profileDialog" class="profile-dialog" aria-labelledby="profileDialogTitle">
+    <div class="dialog-body">
+      <h2 id="profileDialogTitle">Mein Profil</h2>
+      <div class="profile-summary">
+        <span id="profileAccountName" class="profile-name">Angemeldetes Konto</span>
+        <span id="profileAccountRole" class="profile-role"></span>
+      </div>
+      <section id="profileLeaderSettings" class="dialog-section hidden" aria-labelledby="leaderSettingsTitle">
+        <div class="dialog-section-head">
+          <div><h3 id="leaderSettingsTitle">Raidleitung verwalten</h3><p>Freigegebene Discord-Mitglieder ernennen oder Raidleitrechte entziehen.</p></div>
+          <span id="raidLeaderCount" class="count-pill">0 Raidlead</span>
+        </div>
+        <div id="raidLeaderList" class="request-list"></div>
+      </section>
+      <div class="actions">
+        <button type="button" class="secondary" data-close>Schließen</button>
+        <button type="button" class="danger" id="logoutBtn">Logout</button>
+      </div>
+    </div>
+  </dialog>
 
   <dialog id="signupDialog" aria-labelledby="signupTitle">
     <div class="dialog-body">
@@ -479,15 +518,21 @@
         grid: document.querySelector('#raidGrid'),
         message: document.querySelector('#message'),
         memberLoginBtn: document.querySelector('#memberLoginBtn'),
-        accountStatus: document.querySelector('#accountStatus'),
         loginBtn: document.querySelector('#loginBtn'),
         logoutBtn: document.querySelector('#logoutBtn'),
         newRaidBtn: document.querySelector('#newRaidBtn'),
-        leaderPanel: document.querySelector('#leaderPanel'),
+        requestsBtn: document.querySelector('#requestsBtn'),
+        requestsBadge: document.querySelector('#requestsBadge'),
+        profileBtn: document.querySelector('#profileBtn'),
+        profileAccountName: document.querySelector('#profileAccountName'),
+        profileAccountRole: document.querySelector('#profileAccountRole'),
+        profileLeaderSettings: document.querySelector('#profileLeaderSettings'),
         requestList: document.querySelector('#requestList'),
         pendingCount: document.querySelector('#pendingCount'),
         memberRequestList: document.querySelector('#memberRequestList'),
-        memberRequestCount: document.querySelector('#memberRequestCount')
+        memberRequestCount: document.querySelector('#memberRequestCount'),
+        raidLeaderList: document.querySelector('#raidLeaderList'),
+        raidLeaderCount: document.querySelector('#raidLeaderCount')
       };
 
       const classRoles = Object.freeze({
@@ -524,6 +569,7 @@
         approvedSignups: [],
         pendingSignups: [],
         memberRequests: [],
+        raidLeaderIds: new Set(),
         activeRaidId: null,
         editRaidId: null,
         collapsedRaids: new Set()
@@ -827,17 +873,17 @@
       }
 
       function renderLeaderPanel() {
-        elements.leaderPanel.classList.toggle('hidden', !state.isLeader);
         if (!state.isLeader) {
           clear(elements.requestList);
           clear(elements.memberRequestList);
+          clear(elements.raidLeaderList);
           return;
         }
         clear(elements.requestList);
         const pending = state.pendingSignups.filter(signup => signup.approval_status === 'pending');
         elements.pendingCount.textContent = `${pending.length} offen`;
         if (!pending.length) {
-          elements.requestList.append(text('div', 'Aktuell sind keine Gastanfragen offen.', 'empty'));
+          elements.requestList.append(text('div', 'Aktuell sind keine Gastanfragen offen.', 'compact-empty'));
         } else {
           for (const signup of pending) {
           const rolePreferences = getRolePreferences(signup);
@@ -879,7 +925,7 @@
         const memberRequests = state.memberRequests.filter(request => request.approval_status === 'pending');
         elements.memberRequestCount.textContent = `${memberRequests.length} offen`;
         if (!memberRequests.length) {
-          elements.memberRequestList.append(text('div', 'Aktuell sind keine Discord-Mitgliedsanfragen offen.', 'empty'));
+          elements.memberRequestList.append(text('div', 'Aktuell sind keine Discord-Mitgliedsanfragen offen.', 'compact-empty'));
         } else {
           for (const memberRequest of memberRequests) {
             const request = document.createElement('article');
@@ -899,22 +945,73 @@
             elements.memberRequestList.append(request);
           }
         }
+
+        clear(elements.raidLeaderList);
+        const approvedMembers = state.memberRequests
+          .filter(request => request.approval_status === 'approved')
+          .sort((a, b) => signupSorter.compare(a.discord_name || '', b.discord_name || ''));
+        const raidLeaderCount = state.raidLeaderIds.size;
+        elements.raidLeaderCount.textContent = `${raidLeaderCount} ${raidLeaderCount === 1 ? 'Raidlead' : 'Raidleads'}`;
+        if (!approvedMembers.length) {
+          elements.raidLeaderList.append(text('div', 'Noch keine freigegebenen Discord-Mitglieder verfügbar.', 'compact-empty'));
+        } else {
+          for (const member of approvedMembers) {
+            const isRaidLeader = state.raidLeaderIds.has(member.user_id);
+            const isCurrentUser = member.user_id === state.user?.id;
+            const request = document.createElement('article');
+            request.className = 'request';
+            const info = document.createElement('div');
+            info.append(text('div', member.discord_name || 'Discord-Nutzer', 'player-name'));
+            info.append(text('div', isRaidLeader
+              ? `Raidlead${isCurrentUser ? ' · Du' : ''}`
+              : 'Freigegebenes Discord-Mitglied', isRaidLeader ? 'player-meta status-going' : 'player-meta'));
+            const actions = document.createElement('div');
+            actions.className = 'actions';
+            const button = text('button', isRaidLeader ? 'Raidlead entfernen' : 'Zum Raidlead machen', isRaidLeader ? 'danger' : 'success');
+            button.type = 'button';
+            if (isRaidLeader && raidLeaderCount <= 1) {
+              button.disabled = true;
+              button.title = 'Der letzte Raidlead kann nicht entfernt werden.';
+            } else {
+              button.addEventListener('click', () => setRaidLeader(member, !isRaidLeader, button));
+            }
+            actions.append(button);
+            request.append(info, actions);
+            elements.raidLeaderList.append(request);
+          }
+        }
       }
 
       function renderAll() {
         const authenticated = Boolean(state.user);
-        elements.memberLoginBtn.classList.toggle('hidden', authenticated);
-        elements.loginBtn.classList.toggle('hidden', authenticated);
-        elements.newRaidBtn.classList.toggle('hidden', !state.isLeader);
-        elements.logoutBtn.classList.toggle('hidden', !authenticated);
-        elements.accountStatus.classList.toggle('hidden', !authenticated);
-        elements.accountStatus.textContent = state.isLeader
+        const guestRequestCount = state.pendingSignups.filter(signup => signup.approval_status === 'pending').length;
+        const memberRequestCount = state.memberRequests.filter(request => request.approval_status === 'pending').length;
+        const totalRequestCount = guestRequestCount + memberRequestCount;
+        const metadata = state.user?.user_metadata || {};
+        const identityMetadata = state.user?.identities?.find(identity => identity.provider === 'discord')?.identity_data || {};
+        const accountName = metadata.global_name || metadata.full_name || metadata.name || metadata.preferred_username
+          || identityMetadata.global_name || identityMetadata.full_name || identityMetadata.name || identityMetadata.preferred_username
+          || state.user?.email || 'Angemeldetes Konto';
+        const accountRole = state.isLeader
           ? 'Raidleitung'
           : state.isMember
-            ? 'Discord-Mitglied'
+            ? 'MUAZCO-Mitglied'
             : state.memberStatus === 'pending'
-              ? 'Discord: Freigabe offen'
-              : 'Discord: nicht freigegeben';
+              ? 'Mitgliedsfreigabe offen'
+              : 'Discord-Konto nicht freigegeben';
+        elements.memberLoginBtn.classList.toggle('hidden', authenticated);
+        elements.loginBtn.classList.toggle('hidden', authenticated);
+        elements.requestsBtn.classList.toggle('hidden', !state.isLeader);
+        elements.requestsBtn.classList.toggle('has-pending', totalRequestCount > 0);
+        elements.requestsBadge.textContent = String(totalRequestCount);
+        elements.newRaidBtn.classList.toggle('hidden', !state.isLeader);
+        elements.profileBtn.classList.toggle('hidden', !authenticated);
+        elements.logoutBtn.classList.toggle('hidden', !authenticated);
+        elements.profileAccountName.textContent = accountName;
+        elements.profileAccountRole.textContent = accountRole;
+        elements.profileLeaderSettings.classList.toggle('hidden', !state.isLeader);
+        if (!authenticated) closeDialog(byId('profileDialog'));
+        if (!state.isLeader) closeDialog(byId('requestsDialog'));
         renderLeaderPanel();
         renderRaids();
       }
@@ -933,15 +1030,18 @@
         if (!state.isLeader) {
           state.pendingSignups = [];
           state.memberRequests = [];
+          state.raidLeaderIds = new Set();
           return;
         }
-        const [signupResult, memberResult] = await Promise.all([
+        const [signupResult, memberResult, leaderResult] = await Promise.all([
           state.db.from('signups').select('*').eq('approval_status', 'pending').order('created_at', { ascending: true }),
-          state.db.from('member_requests').select('*').eq('approval_status', 'pending').order('created_at', { ascending: true })
+          state.db.from('member_requests').select('*').order('created_at', { ascending: true }),
+          state.db.rpc('list_raid_leaders')
         ]);
-        if (signupResult.error || memberResult.error) throw new Error('leader-load');
+        if (signupResult.error || memberResult.error || leaderResult.error) throw new Error('leader-load');
         state.pendingSignups = signupResult.data || [];
         state.memberRequests = memberResult.data || [];
+        state.raidLeaderIds = new Set((leaderResult.data || []).map(row => row.user_id).filter(Boolean));
       }
 
       async function refreshData() {
@@ -991,6 +1091,7 @@
         if (!state.isLeader) {
           state.pendingSignups = [];
           state.memberRequests = [];
+          state.raidLeaderIds = new Set();
         }
         await refreshData();
       }
@@ -1082,6 +1183,30 @@
         } catch (_error) {
           controls.forEach(control => { control.disabled = false; });
           showNotice('Die Mitgliedsanfrage konnte nicht bearbeitet werden. Bitte lade die Daten neu und prüfe deine Berechtigung.', 'error');
+        }
+      }
+
+      async function setRaidLeader(member, enabled, button) {
+        if (!state.isLeader || !member?.user_id || !button) return;
+        const displayName = member.discord_name || 'Dieses Discord-Mitglied';
+        if (!enabled && !window.confirm(`Raidleiterrechte von „${displayName}“ wirklich entziehen?`)) return;
+        button.disabled = true;
+        try {
+          const result = await state.db.rpc('set_raid_leader', {
+            target_user_id: member.user_id,
+            enabled
+          });
+          if (result.error) throw result.error;
+          await syncAuthentication();
+          showNotice(enabled
+            ? `${displayName} wurde zum Raidlead ernannt.`
+            : `${displayName} ist nicht mehr Teil der Raidleitung.`, 'ok');
+        } catch (error) {
+          const message = String(error?.message || '');
+          showNotice(message.includes('letzte Raidlead')
+            ? 'Der letzte Raidlead kann nicht entfernt werden.'
+            : 'Die Raidleiter-Berechtigung konnte nicht geändert werden. Bitte prüfe deine Berechtigung und die Mitgliedsfreigabe.', 'error');
+          if (button.isConnected) button.disabled = false;
         }
       }
 
@@ -1202,17 +1327,22 @@
         }
       });
       elements.loginBtn.addEventListener('click', () => openDialog(byId('loginDialog')));
+      elements.requestsBtn.addEventListener('click', () => openDialog(byId('requestsDialog')));
       elements.newRaidBtn.addEventListener('click', () => openRaidEditor());
+      elements.profileBtn.addEventListener('click', () => openDialog(byId('profileDialog')));
       elements.logoutBtn.addEventListener('click', async () => {
         try {
           await state.db.auth.signOut();
         } finally {
+          closeDialog(byId('profileDialog'));
+          closeDialog(byId('requestsDialog'));
           state.user = null;
           state.isLeader = false;
           state.isMember = false;
           state.memberStatus = 'none';
           state.pendingSignups = [];
           state.memberRequests = [];
+          state.raidLeaderIds = new Set();
           await refreshData();
           showNotice('Du wurdest sicher ausgeloggt.', 'ok');
         }
