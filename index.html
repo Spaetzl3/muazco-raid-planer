@@ -7,6 +7,7 @@
   <meta name="theme-color" content="#0d1117">
   <meta name="description" content="MUAZCO Raid Planer 2.4 – Raids ansehen, Mitglieder anmelden und Kader verwalten.">
   <title>MUAZCO · Raid Planer 2.4</title>
+  <link rel="stylesheet" href="addon-sync/private-sync-ui.css">
   <style>
     :root {
       color-scheme: dark;
@@ -286,6 +287,10 @@
     .role-field { margin: 15px 0 0; padding: 0; border: 0; }
     .role-field legend { margin-bottom: 8px; color: #c9d2d8; font-size: 13px; font-weight: 700; }
     .role-options { display: flex; gap: 9px; flex-wrap: wrap; }
+    .raid-slot-inputs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+    .raid-slot-inputs label { margin: 0; }
+    .raid-slot-inputs input { display: block; margin-top: 6px; }
+    .raid-slot-error { margin: 8px 0 0; }
     .role-choice {
       display: flex;
       align-items: center;
@@ -301,6 +306,8 @@
     .role-choice input { width: auto; min-height: 0; margin: 0; accent-color: var(--gold); }
     .form-note { margin: 18px 0 0; padding: 12px 14px; border-radius: 9px; color: #c9d5dc; background: var(--surface-2); font-size: 13px; }
     dialog .actions { margin-top: 20px; }
+    .admin-login { background: transparent; color: inherit; border: 0; padding: 8px; font: inherit; text-decoration: underline; cursor: pointer; }
+    .raid-countdown { margin-top: 20px; font-size: clamp(18px, 3vw, 28px); font-variant-numeric: tabular-nums; color: var(--text, #e8eef2); }
     footer { padding: 32px 20px 48px; color: #778894; text-align: center; font-size: 12px; letter-spacing: .08em; }
 
     @media (max-width: 760px) {
@@ -360,7 +367,6 @@
     </div>
     <div class="top-actions">
       <button class="secondary" id="memberLoginBtn" type="button">Mit Discord anmelden</button>
-      <button class="secondary" id="loginBtn" type="button">Raidleitung Login</button>
       <button class="secondary requests-button hidden" id="requestsBtn" type="button">Anfragen <span id="requestsBadge" class="count-pill">0</span></button>
       <button id="newRaidBtn" class="hidden" type="button">+ Raid erstellen</button>
       <button class="secondary hidden" id="profileBtn" type="button">Mein Profil</button>
@@ -372,6 +378,7 @@
       <div>
         <p class="eyebrow">WoW FOREVER Raid Organisation</p>
         <h1 id="pageTitle">MUAZCO RAIDS</h1>
+        <p id="raidCountdown" class="raid-countdown" role="timer" aria-label="Zeit bis zum nächsten Raid">Nächster Raid: wird geladen …</p>
         <p class="hero-copy">Wähle deinen Raid und sende deine Gastanfrage. Nach Freigabe durch die Raidleitung erscheint dein Charakter im bestätigten Kader.</p>
       </div>
     </section>
@@ -383,7 +390,7 @@
     </section>
   </main>
 
-  <footer>MUAZCO · RAID PLANER 2.4</footer>
+  <footer>MUAZCO · RAID PLANER 2.4<br><button class="admin-login" id="loginBtn" type="button">Admin Login</button></footer>
 
   <dialog id="requestsDialog" class="wide-dialog" aria-labelledby="requestsDialogTitle">
     <div class="dialog-body">
@@ -421,6 +428,7 @@
         </div>
         <div id="raidLeaderList" class="request-list"></div>
       </section>
+      <section id="profileAddonSync" class="dialog-section hidden"></section>
       <div class="actions">
         <button type="button" class="secondary" data-close>Schließen</button>
         <button type="button" class="danger" id="logoutBtn">Logout</button>
@@ -467,7 +475,7 @@
 
   <dialog id="loginDialog" aria-labelledby="loginTitle">
     <div class="dialog-body">
-      <h2 id="loginTitle">Raidleitung</h2>
+      <h2 id="loginTitle">Admin Login</h2>
       <p>Die Verwaltungsansicht wird erst nach der serverseitigen Berechtigungsprüfung geöffnet.</p>
       <form id="loginForm">
         <label for="email">E-Mail</label>
@@ -490,6 +498,9 @@
         <input id="raidName" name="name" maxlength="100" required placeholder="z. B. Molten Core">
         <label for="raidDate">Startzeit</label>
         <input id="raidDate" name="starts_at" type="datetime-local" required>
+        <label for="raidEndDate">Endzeit (optional)</label>
+        <input id="raidEndDate" name="ends_at" type="datetime-local" aria-describedby="raidEndHint">
+        <small id="raidEndHint">Bei Raids über Mitternacht das Datum des Folgetags wählen.</small>
         <label for="raidCapacity">Max. Spieler</label>
         <select id="raidCapacity" name="capacity" required>
           <option value="10">10 Spieler</option>
@@ -497,6 +508,22 @@
           <option value="25">25 Spieler</option>
           <option value="40" selected>40 Spieler</option>
         </select>
+        <fieldset class="role-field" aria-describedby="raidSlotHint">
+          <legend>Rollenplätze</legend>
+          <div class="raid-slot-inputs">
+            <label for="raidTankSlots">Tanks
+              <input id="raidTankSlots" name="tank_slots" type="number" min="0" max="100" step="1">
+            </label>
+            <label for="raidHealerSlots">Heiler
+              <input id="raidHealerSlots" name="healer_slots" type="number" min="0" max="100" step="1">
+            </label>
+            <label for="raidDpsSlots">DDs
+              <input id="raidDpsSlots" name="dps_slots" type="number" min="0" max="100" step="1">
+            </label>
+          </div>
+          <span id="raidSlotHint" class="field-hint">Die Rollenplätze müssen zusammen der Raidgröße entsprechen. Gib bei Bedarf 0 ein.</span>
+          <p id="raidSlotError" class="notice error raid-slot-error" role="alert" hidden></p>
+        </fieldset>
         <label for="raidNote">Notiz (optional)</label>
         <textarea id="raidNote" name="note" maxlength="250" placeholder="Treffpunkt, Discord, Loot-Regeln …"></textarea>
         <div class="actions">
@@ -514,6 +541,7 @@
       'use strict';
 
       const config = window.FOREVER_CONFIG || {};
+      let privateAddonSync;
       const elements = {
         grid: document.querySelector('#raidGrid'),
         message: document.querySelector('#message'),
@@ -558,6 +586,8 @@
         'Schurke': 'rogue.jpg'
       });
       const allowedStatuses = new Set(['Dabei', 'Ersatz', 'Ersatzbank', 'Abgesagt']);
+      const raidSlotColumns = ['tank_slots', 'healer_slots', 'dps_slots'];
+      const hasRaidSlots = raid => raidSlotColumns.every(column => Number.isInteger(raid[column]) && raid[column] >= 0);
       const playerTypeLabels = Object.freeze({ guest: 'Gast', member: 'Mitglied' });
       const state = {
         db: null,
@@ -570,6 +600,8 @@
         pendingSignups: [],
         memberRequests: [],
         raidLeaderIds: new Set(),
+        protectedRaidLeaderIds: new Set(),
+        leaderProtectionReady: false,
         activeRaidId: null,
         editRaidId: null,
         collapsedRaids: new Set()
@@ -613,8 +645,26 @@
         const date = new Date(value);
         return Number.isNaN(date.getTime())
           ? 'Termin nicht verfügbar'
-          : new Intl.DateTimeFormat('de-DE', { dateStyle: 'full', timeStyle: 'short' }).format(date);
+          : new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(date);
       };
+      function formatRaidDate(raid) {
+        const start = formatDate(raid.starts_at);
+        if (!raid.ends_at) return start;
+        return start + ' – Ende: ' + formatDate(raid.ends_at);
+      }
+      function countdownText(raids, now = Date.now()) {
+        const next = raids.map(raid => new Date(raid.starts_at).getTime())
+          .filter(start => Number.isFinite(start) && start > now).sort((a, b) => a - b)[0];
+        if (next === undefined) return 'Kein weiterer Raid geplant';
+        const seconds = Math.ceil((next - now) / 1000);
+        const days = Math.floor(seconds / 86400);
+        const clock = [Math.floor(seconds / 3600) % 24, Math.floor(seconds / 60) % 60, seconds % 60]
+          .map(value => String(value).padStart(2, '0')).join(':');
+        return 'Nächster Raid in: ' + (days ? days + (days === 1 ? ' Tag ' : ' Tage ') : '') + clock;
+      }
+      function updateRaidCountdown() {
+        byId('raidCountdown').textContent = countdownText(state.raids);
+      }
       const normalizeRole = role => role === 'DPS' ? 'DD' : String(role || '—');
       const getRolePreferences = signup => {
         const offered = Array.isArray(signup?.role_preferences) ? signup.role_preferences : [];
@@ -789,7 +839,7 @@
           header.setAttribute('role', 'button');
           const bodyId = `raid-body-${raid.id}`;
           header.setAttribute('aria-controls', bodyId);
-          header.append(text('div', formatDate(raid.starts_at), 'card-date'));
+          header.append(text('div', formatRaidDate(raid), 'card-date'));
           header.append(text('h2', raid.name || 'Raid'));
           header.append(text('p', raid.note || 'Keine Zusatzinfos', 'card-note'));
           header.append(text('span', '⌄', 'raid-toggle-indicator'));
@@ -824,9 +874,11 @@
           stats.className = 'stats';
           const capacity = Number.isFinite(Number(raid.capacity)) ? Number(raid.capacity) : '—';
           stats.append(makeStat('👥', `${going.length}/${capacity}`, 'Dabei'));
-          stats.append(makeStat('🛡', counts.Tank, counts.Tank === 1 ? 'Tank' : 'Tanks'));
-          stats.append(makeStat('✚', counts.Heiler, 'Heiler'));
-          stats.append(makeStat('⚔', counts.DD, 'DD'));
+          const showRaidSlots = hasRaidSlots(raid);
+          const roleStat = (used, required) => showRaidSlots ? used + ' / ' + required : used;
+          stats.append(makeStat('🛡', roleStat(counts.Tank, raid.tank_slots), showRaidSlots || counts.Tank !== 1 ? 'Tanks' : 'Tank'));
+          stats.append(makeStat('✚', roleStat(counts.Heiler, raid.healer_slots), 'Heiler'));
+          stats.append(makeStat('⚔', roleStat(counts.DD, raid.dps_slots), 'DD'));
           top.append(stats);
 
           const actions = document.createElement('div');
@@ -969,7 +1021,11 @@
             actions.className = 'actions';
             const button = text('button', isRaidLeader ? 'Raidlead entfernen' : 'Zum Raidlead machen', isRaidLeader ? 'danger' : 'success');
             button.type = 'button';
-            if (isRaidLeader && raidLeaderCount <= 1) {
+            if (isRaidLeader && (!state.leaderProtectionReady || state.protectedRaidLeaderIds.has(member.user_id))) {
+              button.disabled = true;
+              button.textContent = state.leaderProtectionReady ? 'Dauerhafter Raidlead' : 'Raidlead geschützt';
+              button.title = state.leaderProtectionReady ? 'Diesem Konto können die Raidlead-Rechte nicht entzogen werden.' : 'Schutzstatus noch nicht verfügbar. Datenbankmigration prüfen.';
+            } else if (isRaidLeader && raidLeaderCount <= 1) {
               button.disabled = true;
               button.title = 'Der letzte Raidlead kann nicht entfernt werden.';
             } else {
@@ -1010,10 +1066,12 @@
         elements.profileAccountName.textContent = accountName;
         elements.profileAccountRole.textContent = accountRole;
         elements.profileLeaderSettings.classList.toggle('hidden', !state.isLeader);
+        privateAddonSync?.setLeader(state.isLeader ? state.user?.id : undefined);
         if (!authenticated) closeDialog(byId('profileDialog'));
         if (!state.isLeader) closeDialog(byId('requestsDialog'));
         renderLeaderPanel();
         renderRaids();
+        updateRaidCountdown();
       }
 
       async function loadPublicData() {
@@ -1042,6 +1100,9 @@
         state.pendingSignups = signupResult.data || [];
         state.memberRequests = memberResult.data || [];
         state.raidLeaderIds = new Set((leaderResult.data || []).map(row => row.user_id).filter(Boolean));
+        const protectionResult = await state.db.rpc('list_protected_raid_leaders');
+        state.leaderProtectionReady = !protectionResult.error;
+        state.protectedRaidLeaderIds = new Set((protectionResult.data || []).map(row => row.user_id));
       }
 
       async function refreshData() {
@@ -1055,10 +1116,10 @@
         }
       }
 
-      async function verifyLeader() {
+      async function verifyLeader(expectedUserId) {
         try {
           const userResult = await state.db.auth.getUser();
-          if (userResult.error || !userResult.data.user) return false;
+          if (userResult.error || !userResult.data.user || (expectedUserId && userResult.data.user.id !== expectedUserId)) return false;
           const permissionResult = await state.db.rpc('is_raid_leader');
           return !permissionResult.error && permissionResult.data === true;
         } catch (_error) {
@@ -1109,6 +1170,12 @@
         byId('charName').focus();
       }
 
+      function setRaidSlotError(message = '') {
+        const error = byId('raidSlotError');
+        error.textContent = message;
+        error.hidden = !message;
+      }
+
       function openRaidEditor(raid = null) {
         if (!state.isLeader) return;
         state.editRaidId = raid?.id || null;
@@ -1116,9 +1183,24 @@
         form.reset();
         const capacitySelect = byId('raidCapacity');
         capacitySelect.querySelectorAll('[data-custom]').forEach(option => option.remove());
+        const existingSlots = raid && hasRaidSlots(raid);
+        const slotsOptional = Boolean(raid) && !existingSlots;
+        for (const column of raidSlotColumns) {
+          const input = form.elements.namedItem(column);
+          input.value = existingSlots ? raid[column] : '';
+          input.required = !slotsOptional;
+        }
+        byId('raidSlotHint').textContent = slotsOptional
+          ? 'Bei diesem Raid können alle drei Felder frei bleiben. Wenn du Rollenplätze festlegst, müssen sie zusammen der Raidgröße entsprechen.'
+          : 'Die Rollenplätze müssen zusammen der Raidgröße entsprechen. Gib bei Bedarf 0 ein.';
+        setRaidSlotError();
         byId('raidDialogTitle').textContent = raid ? 'Raid bearbeiten' : 'Raid erstellen';
         if (raid) {
           byId('raidName').value = raid.name || '';
+          if (raid.ends_at) {
+            const end = new Date(raid.ends_at);
+            if (Number.isFinite(end.getTime())) byId('raidEndDate').value = new Date(end.getTime() - end.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+          }
           const date = new Date(raid.starts_at);
           if (!Number.isNaN(date.getTime())) {
             const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
@@ -1188,6 +1270,10 @@
 
       async function setRaidLeader(member, enabled, button) {
         if (!state.isLeader || !member?.user_id || !button) return;
+        if (!enabled && (!state.leaderProtectionReady || state.protectedRaidLeaderIds.has(member.user_id))) {
+          showNotice('Diesem Konto können die Raidlead-Rechte nicht entzogen werden.', 'error');
+          return;
+        }
         const displayName = member.discord_name || 'Dieses Discord-Mitglied';
         if (!enabled && !window.confirm(`Raidleiterrechte von „${displayName}“ wirklich entziehen?`)) return;
         button.disabled = true;
@@ -1203,7 +1289,9 @@
             : `${displayName} ist nicht mehr Teil der Raidleitung.`, 'ok');
         } catch (error) {
           const message = String(error?.message || '');
-          showNotice(message.includes('letzte Raidlead')
+          showNotice(message.includes('Dauerhafte Raidlead')
+            ? 'Diesem Konto können die Raidlead-Rechte nicht entzogen werden.'
+            : message.includes('letzte Raidlead')
             ? 'Der letzte Raidlead kann nicht entfernt werden.'
             : 'Die Raidleiter-Berechtigung konnte nicht geändert werden. Bitte prüfe deine Berechtigung und die Mitgliedsfreigabe.', 'error');
           if (button.isConnected) button.disabled = false;
@@ -1439,15 +1527,36 @@
         }
       });
 
+      byId('raidForm').addEventListener('input', () => setRaidSlotError());
       byId('raidForm').addEventListener('submit', async event => {
         event.preventDefault();
         if (!state.isLeader) return;
         const form = event.currentTarget;
         const localDate = new Date(byId('raidDate').value);
+        const endValue = byId('raidEndDate').value;
+        const endDate = endValue ? new Date(endValue) : null;
+        if (endDate && (!Number.isFinite(endDate.getTime()) || endDate <= localDate)) {
+          showNotice('Die Endzeit muss nach der Startzeit liegen.', 'error');
+          return;
+        }
         const capacity = Number(byId('raidCapacity').value);
         if (Number.isNaN(localDate.getTime()) || !Number.isInteger(capacity) || capacity < 1 || capacity > 100) {
           showNotice('Bitte wähle einen gültigen Termin und eine gültige Raidgröße.', 'error');
           return;
+        }
+        const slotInputs = raidSlotColumns.map(column => form.elements.namedItem(column));
+        let raidSlots = {};
+        if (slotInputs.some(input => input.required || input.value !== '')) {
+          const values = slotInputs.map(input => input.valueAsNumber);
+          if (values.some(value => !Number.isInteger(value) || value < 0 || value > 100)) {
+            setRaidSlotError('Trage für alle drei Rollen eine ganze Zahl von 0 bis 100 ein.');
+            return;
+          }
+          if (values.reduce((total, value) => total + value, 0) !== capacity) {
+            setRaidSlotError('Die Rollenplätze müssen zusammen ' + capacity + ' ergeben.');
+            return;
+          }
+          raidSlots = Object.fromEntries(raidSlotColumns.map((column, index) => [column, values[index]]));
         }
         const submit = form.querySelector('[type="submit"]');
         submit.dataset.label = 'Raid speichern';
@@ -1456,19 +1565,21 @@
           const payload = {
             name: byId('raidName').value.trim(),
             starts_at: localDate.toISOString(),
+            ends_at: endDate ? endDate.toISOString() : null,
             capacity,
+            ...raidSlots,
             note: byId('raidNote').value.trim()
           };
           const query = state.editRaidId
             ? state.db.from('raids').update(payload).eq('id', state.editRaidId)
             : state.db.from('raids').insert(payload);
           const result = await query;
-          if (result.error) throw new Error('save');
+          if (result.error) throw result.error;
           closeDialog(byId('raidDialog'));
           showNotice('Der Raid wurde gespeichert.', 'ok');
           await refreshData();
         } catch (_error) {
-          showNotice('Der Raid konnte nicht gespeichert werden. Bitte prüfe deine Raidleiter-Berechtigung.', 'error');
+          showNotice('Der Raid konnte nicht gespeichert werden. Bitte prüfe deine Berechtigung und ob migration_v2.5.sql bereits ausgeführt wurde.', 'error');
         } finally {
           setBusy(form, false);
         }
@@ -1488,7 +1599,14 @@
         }
         try {
           state.db = window.supabase.createClient(config.url, config.anonKey);
-          state.db.auth.onAuthStateChange(() => { window.setTimeout(syncAuthentication, 0); });
+          import('./addon-sync/roman-private-sync.mjs').then(({ createRomanPrivateSync }) => {
+            privateAddonSync = createRomanPrivateSync({ container: byId('profileAddonSync'), db: state.db, verifyLeader, refreshData });
+            privateAddonSync.setLeader(state.isLeader ? state.user?.id : undefined);
+          }).catch(() => console.warn('Der private MUAZCO-Abgleich konnte nicht geladen werden.'));
+          state.db.auth.onAuthStateChange((_event, session) => {
+            if (session?.user?.id !== state.user?.id) privateAddonSync?.setLeader(undefined);
+            window.setTimeout(syncAuthentication, 0);
+          });
           await syncAuthentication();
         } catch (_error) {
           showNotice('Die Verbindung konnte nicht gestartet werden. Bitte prüfe die Einstellungen in config.js.', 'error');
@@ -1496,6 +1614,7 @@
         }
       }
 
+      window.setInterval(updateRaidCountdown, 1000);
       start();
     })();
   </script>
